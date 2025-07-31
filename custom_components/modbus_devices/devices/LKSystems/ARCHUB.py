@@ -27,37 +27,37 @@ class Device(ModbusDevice):
 
         # Override static device information
         self.manufacturer="LKSystems"
-        self.model="ArcHub"
+        self.model="ARCHUB"
 
         # DEVICE_INFO - Read-only
         self.Datapoints[self.GROUP_DEVICE_INFO] = {
-            "Serial Number": ModbusDatapoint(Address=1, Length=4),     # 4 registers
-            "Software Version Major": ModbusDatapoint(Address=5),
-            "Software Version Minor": ModbusDatapoint(Address=6),
-            "Software Version Micro": ModbusDatapoint(Address=7),
+            "Serial Number": ModbusDatapoint(Address=1, Length=3),     # 4 registers
+            "Software Version Major": ModbusDatapoint(Address=4),
+            "Software Version Minor": ModbusDatapoint(Address=5),
+            "Software Version Micro": ModbusDatapoint(Address=6),
             "Number Of Zones": ModbusDatapoint(Address=51),
         }
 
         # UNIT_STATUSES - Read
         self.Datapoints[self.GROUP_UNIT_STATUSES] = {
-            "Actuator 1": ModbusDatapoint(Address=61),
-            "Actuator 2": ModbusDatapoint(Address=62),
-            "Actuator 3": ModbusDatapoint(Address=63),
-            "Actuator 4": ModbusDatapoint(Address=64),
-            "Actuator 5": ModbusDatapoint(Address=65),
-            "Actuator 6": ModbusDatapoint(Address=66),
-            "Actuator 7": ModbusDatapoint(Address=67),
-            "Actuator 8": ModbusDatapoint(Address=68),
-            "Actuator 9": ModbusDatapoint(Address=69),
-            "Actuator 10": ModbusDatapoint(Address=70),
-            "Actuator 11": ModbusDatapoint(Address=71),
-            "Actuator 12": ModbusDatapoint(Address=72),
+            "Actuator 1": ModbusDatapoint(Address=60),
+            "Actuator 2": ModbusDatapoint(Address=61),
+            "Actuator 3": ModbusDatapoint(Address=62),
+            "Actuator 4": ModbusDatapoint(Address=63),
+            "Actuator 5": ModbusDatapoint(Address=64),
+            "Actuator 6": ModbusDatapoint(Address=65),
+            "Actuator 7": ModbusDatapoint(Address=66),
+            "Actuator 8": ModbusDatapoint(Address=67),
+            "Actuator 9": ModbusDatapoint(Address=68),
+            "Actuator 10": ModbusDatapoint(Address=69),
+            "Actuator 11": ModbusDatapoint(Address=70),
+            "Actuator 12": ModbusDatapoint(Address=71),
         }
 
 
         # ALARMS - Read-only
         self.Datapoints[self.GROUP_ALARMS] = {
-            "Cooling Emergency Mode": ModbusDatapoint(Address=81),
+            "Cooling Emergency Mode": ModbusDatapoint(Address=80),
         }
 
         # SENSORS - Read
@@ -65,42 +65,43 @@ class Device(ModbusDevice):
         # Zones below (MAX 12)
         # Should theses be addded dynamically based on "number of zones"??? 
         self.Datapoints[self.GROUP_SENSORS] = {
-            "Zone1 Actual Temperature": ModbusDatapoint(Address=101, Scaling=0.1, DataType=ModbusSensorData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),
-            "Zone1 Actual Humidity": ModbusDatapoint(Address=102, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.HUMIDITY, units=PERCENTAGE)),
-            "Zone1 Actual Battery": ModbusDatapoint(Address=103, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.BATTERY, units=PERCENTAGE)),
-            "Zone1 Actual Signal Strength": ModbusDatapoint(Address=104),
-            "Zone1 Thermostat Address": ModbusDatapoint(Address=105, Length=3),
-            "Zone1 Connected Actuators": ModbusDatapoint(Address=108),
+            "Zone1 Actual Temperature": ModbusDatapoint(Address=100, Scaling=0.1, DataType=ModbusSensorData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),
+            "Zone1 Actual Humidity": ModbusDatapoint(Address=101, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.HUMIDITY, units=PERCENTAGE)),
+            "Zone1 Actual Battery": ModbusDatapoint(Address=102, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.BATTERY, units=PERCENTAGE)),
+            "Zone1 Actual Signal Strength": ModbusDatapoint(Address=103),
+            "Zone1 Thermostat Address": ModbusDatapoint(Address=104, Length=3),
+            "Zone1 Connected Actuators": ModbusDatapoint(Address=106),
         }
 
 
 
         # COMMANDS - Read/Write
         self.Datapoints[self.GROUP_COMMANDS] = {
-            "Operating Mode": ModbusDatapoint(Address=1, DataType=ModbusSelectData(options={0: "Undefined", 1: "Heating", 2: "Cooling"})),
-            "LED Enable": ModbusDatapoint(Address=59, DataType=ModbusSelectData(options={0: "Disable", 1: "Enable"})),
+            "Operating Mode": ModbusDatapoint(Address=0, DataType=ModbusSelectData(options={0: "Undefined", 1: "Heating", 2: "Cooling"})),
+            "LED Enable": ModbusDatapoint(Address=58, DataType=ModbusSelectData(options={0: "Disable", 1: "Enable"})),
         }
 
         # SETPOINTS - Read/Write
         self.Datapoints[self.GROUP_SETPOINTS] = {
-            "Temperature Alarm High Level": ModbusDatapoint(Address=51, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
-            "Temperature Alarm Low Level": ModbusDatapoint(Address=52, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1))
-            "Humidity Alarm High Level": ModbusDatapoint(Address=53, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.HUMIDITY, units=PRECENTAGE, min_value=0, max_value=100, step=0.1)),
-            "Humidity Alarm Low Level": ModbusDatapoint(Address=54, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.HUMIDITY, units=PRECENTAGE, min_value=0, max_value=100, step=0.1)),
-            "Battery Alarm Low Level": ModbusDatapoint(Address=55, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.BATTERY, units=PRECENTAGE, min_value=0, max_value=100, step=0.1)),
-            "Battery Alarm Critical Level": ModbusDatapoint(Address=56, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.BATTERY, units=PRECENTAGE, min_value=0, max_value=100, step=0.1)),
-            "Cooling Emergency Number of Zones": ModbusDatapoint(Address=57, min_value=0, max_value=12)),
-            "Coling Mode Humidity Limit": ModbusDatapoint(Address=58, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.HUMIDITY, units=PRECENTAGE, min_value=0, max_value=100, step=0.1)),
+            "Temperature Alarm High Level": ModbusDatapoint(Address=50, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
+            "Temperature Alarm Low Level": ModbusDatapoint(Address=51, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
+            "Humidity Alarm High Level": ModbusDatapoint(Address=52, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
+            "Humidity Alarm Low Level": ModbusDatapoint(Address=53, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
+            "Battery Alarm Low Level": ModbusDatapoint(Address=54, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.BATTERY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
+            "Battery Alarm Critical Level": ModbusDatapoint(Address=55, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.BATTERY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
+            "Cooling Emergency Number of Zones": ModbusDatapoint(Address=56, DataType=ModbusNumberData(min_value=0, max_value=12)),
+            "Coling Mode Humidity Limit": ModbusDatapoint(Address=57, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
 #
 # Zones below (MAX 12), should be in separate sections? Should be addded dynamically based on "number of zones"??
 #
-            "Zone 1 Target Temperature": ModbusDatapoint(Address=101, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
-            "Zone 1 Override ": ModbusDatapoint(Address=102, DataType=ModbusSelectData(options={0: "Inactive", 1: "Active"})),
-            "Zone 1 Override Level": ModbusDatapoint(Address=103, min_value=0, max_value=255)),
+##            "Zone 1 Target Temperature": ModbusDatapoint(Address=100, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
+            "Zone 1 Target Temperature": ModbusDatapoint(Address=100, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100)),
+            "Zone 1 Override ": ModbusDatapoint(Address=101, DataType=ModbusSelectData(options={0: "Inactive", 1: "Active"})),
+            "Zone 1 Override Level": ModbusDatapoint(Address=102, DataType=ModbusNumberData(min_value=0, max_value=255)),
         }
 ##
 ##
-##
+## Below is leftover code from casa, remove later... 
 ##
         # CONFIGURATION - Read/Write
         self.Datapoints[ModbusDefaultGroups.CONFIG] = {
@@ -124,20 +125,20 @@ class Device(ModbusDevice):
 
     def onAfterFirstRead(self):
         # Update device info
-        self.serial_number = self.Datapoints[self.GROUP_DEVICE_INFO]["Gateway Serial Number"].Value
+        self.serial_number = self.Datapoints[self.GROUP_DEVICE_INFO]["Serial Number"].Value
 
-        a = self.Datapoints[self.GROUP_DEVICE_INFO]["GateWay Software Version Major"].Value
-        b = self.Datapoints[self.GROUP_DEVICE_INFO]["GateWay Software Version Minor"].Value
-        c = self.Datapoints[self.GROUP_DEVICE_INFO]["GateWay Software Version Micro"].Value
+        a = self.Datapoints[self.GROUP_DEVICE_INFO]["Software Version Major"].Value
+        b = self.Datapoints[self.GROUP_DEVICE_INFO]["Software Version Minor"].Value
+        c = self.Datapoints[self.GROUP_DEVICE_INFO]["Software Version Micro"].Value
         self.sw_version = '{}.{}.{}'.format(a,b,c)
 
-    def onAfterRead(self):
-
-        # Set alarms as attributes on Alarm-datapoint. This is done so that we don't
-        # need to present all values in the UI
-        alarms = self.Datapoints[self.GROUP_ALARMS]
-        attrs = {}
-        for (dataPointName, data) in alarms.items():
-            if data.Value:
-                attrs.update({dataPointName:"ALARM"})
-        alarms["Active Alarms"].Attrs = attrs
+##    def onAfterRead(self):
+##
+##        # Set alarms as attributes on Alarm-datapoint. This is done so that we don't
+##        # need to present all values in the UI
+##        alarms = self.Datapoints[self.GROUP_ALARMS]
+##        attrs = {}
+##        for (dataPointName, data) in alarms.items():
+##            if data.Value:
+##                attrs.update({dataPointName:"ALARM"})
+##        alarms["Active Alarms"].Attrs = attrs
