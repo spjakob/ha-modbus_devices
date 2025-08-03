@@ -1,4 +1,5 @@
 import logging
+import struct
 
 from ..modbusdevice import ModbusDevice
 from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups, ModbusMode, ModbusPollMode
@@ -32,48 +33,34 @@ class Device(ModbusDevice):
 
     # DEVICE_INFO - Read-only
     Datapoints[GROUP_DEVICE_INFO] = {
-        "Serial Number": ModbusDatapoint(Address=1, Length=3),     # 4 registers
+        "Serial Number": ModbusDatapoint(Address=0, Length=4),     # 4 registers
         "Software Version Major": ModbusDatapoint(Address=4),
         "Software Version Minor": ModbusDatapoint(Address=5),
         "Software Version Micro": ModbusDatapoint(Address=6),
-        "Number Of Zones": ModbusDatapoint(Address=51),
+        "Number Of Zones": ModbusDatapoint(Address=50),
     }
 
     # UNIT_STATUSES - Read
     Datapoints[GROUP_UNIT_STATUSES] = {
-        "Actuator 1": ModbusDatapoint(Address=60),
-        "Actuator 2": ModbusDatapoint(Address=61),
-        "Actuator 3": ModbusDatapoint(Address=62),
-        "Actuator 4": ModbusDatapoint(Address=63),
-        "Actuator 5": ModbusDatapoint(Address=64),
-        "Actuator 6": ModbusDatapoint(Address=65),
-        "Actuator 7": ModbusDatapoint(Address=66),
-        "Actuator 8": ModbusDatapoint(Address=67),
-        "Actuator 9": ModbusDatapoint(Address=68),
-        "Actuator 10": ModbusDatapoint(Address=69),
-        "Actuator 11": ModbusDatapoint(Address=70),
-        "Actuator 12": ModbusDatapoint(Address=71),
+        "Actuator 1": ModbusDatapoint(Address=60,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 2": ModbusDatapoint(Address=61,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 3": ModbusDatapoint(Address=62,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 4": ModbusDatapoint(Address=63,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 5": ModbusDatapoint(Address=64,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 6": ModbusDatapoint(Address=65,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 7": ModbusDatapoint(Address=66,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 8": ModbusDatapoint(Address=67,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 9": ModbusDatapoint(Address=68,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 10": ModbusDatapoint(Address=69,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 11": ModbusDatapoint(Address=70,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+        "Actuator 12": ModbusDatapoint(Address=71,DataType=ModbusSensorData(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
     }
 
 
     # ALARMS - Read-only
     Datapoints[GROUP_ALARMS] = {
-        "Cooling Emergency Mode": ModbusDatapoint(Address=80),
+        "Cooling Emergency Mode": ModbusDatapoint(Address=80,DataType=ModbusSensorData(enum={0: "Normal Mode", 1: "Emergency Mode"})),
     }
-
-    # SENSORS - Read
-    #
-    # Zones below (MAX 12)
-    # Should theses be addded dynamically based on "number of zones"??? 
-    Datapoints[GROUP_SENSORS] = {
-        "Zone1 Actual Temperature": ModbusDatapoint(Address=100, Scaling=0.1, DataType=ModbusSensorData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),
-        "Zone1 Actual Humidity": ModbusDatapoint(Address=101, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.HUMIDITY, units=PERCENTAGE)),
-        "Zone1 Actual Battery": ModbusDatapoint(Address=102, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.BATTERY, units=PERCENTAGE)),
-        "Zone1 Actual Signal Strength": ModbusDatapoint(Address=103),
-        "Zone1 Thermostat Address": ModbusDatapoint(Address=104, Length=3),
-        "Zone1 Connected Actuators": ModbusDatapoint(Address=106),
-    }
-
 
 
     # COMMANDS - Read/Write
@@ -95,8 +82,7 @@ class Device(ModbusDevice):
 #
 # Zones below (MAX 12), should be in separate sections? Should be addded dynamically based on "number of zones"??
 #
-##            "Zone 1 Target Temperature": ModbusDatapoint(Address=100, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
-        "Zone 1 Target Temperature": ModbusDatapoint(Address=100, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100)),
+        "Zone 1 Target Temperature": ModbusDatapoint(Address=100, Scaling=0.1, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
         "Zone 1 Override ": ModbusDatapoint(Address=101, DataType=ModbusSelectData(options={0: "Inactive", 1: "Active"})),
         "Zone 1 Override Level": ModbusDatapoint(Address=102, DataType=ModbusNumberData(min_value=0, max_value=255)),
     }
@@ -126,12 +112,40 @@ class Device(ModbusDevice):
 
     def onAfterFirstRead(self):
         # Update device info
-        self.serial_number = self.Datapoints[self.GROUP_DEVICE_INFO]["Serial Number"].Value
+        # Convert 4x16bit to 64 bit value
+        packed_bytes=struct.pack('>HHHH',*self.Datapoints[self.GROUP_DEVICE_INFO]["Serial Number"].Value)
+        self.serial_number = struct.unpack('>Q',packed_bytes)[0]
+        self.number_of_zones=self.Datapoints[self.GROUP_DEVICE_INFO]["Number Of Zones"].Value
 
         a = self.Datapoints[self.GROUP_DEVICE_INFO]["Software Version Major"].Value
         b = self.Datapoints[self.GROUP_DEVICE_INFO]["Software Version Minor"].Value
         c = self.Datapoints[self.GROUP_DEVICE_INFO]["Software Version Micro"].Value
-        self.sw_version = '{}.{}.{}'.format(a,b,c)
+        self.sw_version = f"{a}.{b}.{c}"
+        _LOGGER.info("Initial setup of %s from %s with serial number %s running firware version %s:", self.model, self.manufacturer, self.serial_number, self.sw_version)
+        _LOGGER.info("%s zones detected and activating entities for these",self.number_of_zones)
+        # Dynamically assign zones
+        self.Datapoints[self.GROUP_SENSORS] = {}
+        for i in range(1,self.number_of_zones+1):
+            base_register=i*100
+            _LOGGER.info("Setting up zone %s adding temperature register %s ",i, base_register)
+            # Add the sensor datapoints to the dictionary
+            self.Datapoints[self.GROUP_SENSORS][f"Zone{i} Actual Temperature"] = ModbusDatapoint(
+                Address=base_register,
+                Scaling=0.1,
+                DataType=ModbusSensorData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS))
+            self.Datapoints[self.GROUP_SENSORS][f"Zone{i} Actual Humidity"] = ModbusDatapoint(
+                Address=base_register + 1,
+                Scaling=0.1,
+                DataType=ModbusSensorData(deviceClass=SensorDeviceClass.HUMIDITY, units=PERCENTAGE))
+            self.Datapoints[self.GROUP_SENSORS][f"Zone{i} Actual Battery"] = ModbusDatapoint(
+                Address=base_register + 2,
+                DataType=ModbusSensorData(deviceClass=SensorDeviceClass.BATTERY, units=PERCENTAGE))
+            self.Datapoints[self.GROUP_SENSORS][f"Zone{i} Actual Signal Strength"] = ModbusDatapoint(
+                Address=base_register + 3)
+            self.Datapoints[self.GROUP_SENSORS][f"Zone{i} Thermostat Address"] = ModbusDatapoint(
+                Address=base_register + 4,Length=3)
+            self.Datapoints[self.GROUP_SENSORS][f"Zone{i} Connected Actuators"] = ModbusDatapoint(
+                Address=base_register + 6)
 
     ##    def onAfterRead(self):
     ##
@@ -143,3 +157,4 @@ class Device(ModbusDevice):
     ##            if data.Value:
     ##                attrs.update({dataPointName:"ALARM"})
     ##        alarms["Active Alarms"].Attrs = attrs
+
