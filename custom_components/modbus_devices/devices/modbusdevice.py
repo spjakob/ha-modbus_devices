@@ -107,16 +107,8 @@ class ModbusDevice():
                 f"for group {group}. Consider splitting the group."
         )
 
-        # Read the appropriate type of registers
-        try:
-            if group.mode == ModbusMode.INPUT:
-                response = await self._client.read_input_registers(address=start_addr, count=n_reg, slave=self._slave_id)
-            elif group.mode == ModbusMode.HOLDING:
-                response = await self._client.read_holding_registers(address=start_addr, count=n_reg, slave=self._slave_id)
-            else:
-                raise ValueError(f"Unsupported Modbus mode: {group.mode}")
-        except Exception as err:
-            raise
+        method = self._get_read_method(group.mode)    
+        response = await method(address=start_addr, count=n_reg, device_id=self._slave_id)
 
         # Handle Modbus errors
         if response.isError():
@@ -142,20 +134,14 @@ class ModbusDevice():
         datapoint = self.Datapoints[group][key]
         length = datapoint.Length
 
-        try:
-            if group.mode == ModbusMode.INPUT:
-                response = await self._client.read_input_registers(address=datapoint.Address, count=length, slave=self._slave_id)
-            elif group.mode == ModbusMode.HOLDING:
-                response = await self._client.read_holding_registers(address=datapoint.Address, count=length, slave=self._slave_id)
-            else:
-                raise ValueError(f"Unsupported Modbus mode: {group.mode}")
-        except Exception as err:
-            raise
+        method = self._get_read_method(group.mode) 
+        response = await method(address=datapoint.Address, count=length, device_id=self._slave_id)
 
-        _LOGGER.debug("Read data: %s", response.registers)
-
+        # Handle Modbus errors
         if response.isError():
             raise ModbusException(f"Error reading value for key '{key}': {response}")
+
+        _LOGGER.debug("Read data: %s", response.registers)
 
         registers = response.registers[:length]
         datapoint.Value = self.process_registers(registers, datapoint.Scaling)
@@ -188,13 +174,19 @@ class ModbusDevice():
             scaled_value >>= 16  # Shift the value to the next 16 bits
 
         # Write the registers
-        try:
-            if length == 1:
-                response = await self._client.write_register(address=datapoint.Address, value=registers[0], slave=self._slave_id)
-            else:
-                response = await self._client.write_registers(address=datapoint.Address, values=registers, slave=self._slave_id)
-        except Exception as err:
-            raise
+        address = datapoint.Address
+        slave = self._slave_id
+
+        if group.mode == ModbusMode.COILS:
+            method = self._client.write_coil if length == 1 else self._client.write_coils
+        else:
+            method = self._client.write_register if length == 1 else self._client.write_registers
+
+        response = await method(
+            address=address,
+            value=registers[0] if length == 1 else registers,
+            device_id=slave,
+        )
 
         if response.isError():
             raise ModbusException(f"Failed to write value for key '{key}': {response}")
@@ -206,6 +198,18 @@ class ModbusDevice():
     """ ******************************************************* """
     """ *********** HELPER FOR PROCESSING REGISTERS *********** """
     """ ******************************************************* """
+    def _get_read_method(self, mode: ModbusMode):
+        dispatch = {
+            ModbusMode.INPUT:   self._client.read_input_registers,
+            ModbusMode.HOLDING: self._client.read_holding_registers,
+            ModbusMode.COILS:   self._client.read_coils,
+        }
+
+        try:
+            return dispatch[mode]
+        except KeyError:
+            raise ValueError(f"Unsupported Modbus mode: {mode}")
+
     def twos_complement(self, number: int, bits: int = 16) -> int:
         if number < 0:
             return number  # If the number is negative, no need for two's complement conversion.

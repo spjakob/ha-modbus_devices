@@ -46,6 +46,7 @@ class ModbusButtonData(ModbusData):
 ################################################
 class ModbusMode(Enum):
     NONE = 0        # Used for virtual data points
+    COILS = 1
     INPUT = 3
     HOLDING = 4
 

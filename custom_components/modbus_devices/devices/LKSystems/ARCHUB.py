@@ -4,9 +4,8 @@ from ..modbusdevice import ModbusDevice
 from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups, ModbusMode, ModbusPollMode
 from ..datatypes import ModbusSensorData, ModbusNumberData, ModbusSelectData
 
-from homeassistant.const import UnitOfTemperature, UnitOfTime
+from homeassistant.const import UnitOfTemperature
 from homeassistant.const import PERCENTAGE
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.number import NumberDeviceClass
 
