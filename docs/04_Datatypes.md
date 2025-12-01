@@ -19,6 +19,7 @@ This creates a "Sensor" entity. Typically used for most readonly values.
 Parameters:  
 | Parameter   | Type       | Default  | Description                |
 |-------------|------------|----------|----------------------------|
+| stateClass  | str        | None     | Sensor State Class         |
 | units       | str        | None     | Units                      |
 | enum        | Dict       | None     | {0: "Value0", 1: "Value1"} |
 

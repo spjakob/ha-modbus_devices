@@ -15,6 +15,7 @@ class ModbusData:
 
 @dataclass
 class ModbusSensorData(ModbusData):
+    stateClass: str = None              # None | Set to valid "SensorStateClass" to enable long term storage
     units: str = None                   # None | from homeassistant.const import UnitOf....
     enum: dict = field(default_factory=dict)
 

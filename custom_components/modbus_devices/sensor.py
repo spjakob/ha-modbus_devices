@@ -34,6 +34,7 @@ class ModbusSensorEntity(ModbusBaseEntity, SensorEntity):
 
         """Sensor Entity properties"""
         self._attr_device_class = modbusDataPoint.DataType.deviceClass
+        self._attr_state_class = modbusDataPoint.DataType.stateClass
         self._attr_native_unit_of_measurement = modbusDataPoint.DataType.units
 
         """Cusom Entity properties"""
