@@ -52,6 +52,10 @@ class ModbusCoordinator(DataUpdateCoordinator):
         else:
             raise ConfigEntryError
 
+    def close(self):
+        """Close the underlying device safely."""
+        self._modbusDevice.close()
+
     @property
     def device_id(self):
         return self._device.id
