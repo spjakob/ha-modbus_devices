@@ -138,7 +138,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Close coordinator + devices
         coordinator = hass.data[DOMAIN].get(entry.entry_id)
         if coordinator:
-            await coordinator.close()
+            coordinator.close()
 
         # Remove entry data
         hass.data[DOMAIN].pop(entry.entry_id)
