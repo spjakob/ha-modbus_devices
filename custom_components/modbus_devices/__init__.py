@@ -36,7 +36,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     # Load config data
-    device_mode_value = entry.data.get(CONF_DEVICE_MODE, DeviceMode.TCPIP)
+    device_mode_value = entry.data.get(CONF_DEVICE_MODE, DeviceMode.TCPIP.value)
 
     # Convert legacy integer values to enum members
     if isinstance(device_mode_value, int):
@@ -50,7 +50,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         device_mode = DeviceMode(device_mode_value)
 
-    #device_mode = DeviceMode(entry.data.get(CONF_DEVICE_MODE, DeviceMode.TCPIP))
     name = entry.data[CONF_NAME]
     device_model = entry.data.get(CONF_DEVICE_MODEL, None)
     scan_interval = entry.data[CONF_SCAN_INTERVAL]
@@ -136,6 +135,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
+        # Close coordinator + devices
+        coordinator = hass.data[DOMAIN].get(entry.entry_id)
+        if coordinator:
+            await coordinator.close()
+
+        # Remove entry data
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok

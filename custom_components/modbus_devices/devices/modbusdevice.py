@@ -37,6 +37,16 @@ class ModbusDevice():
 
         self.firstRead = True
 
+    def close(self):
+        """Close the underlying client safely."""
+        try:
+            _LOGGER.debug("Shutting down and disconnecting device: %s %s",  self.manufacturer, self.model)
+            self._client.close()
+        except Exception as e:
+            _LOGGER.warning("Error closing client for device %s %s: %s", self.manufacturer, self.model, e)
+        finally:
+            self._client = None
+
     def loadConfigUI(self):
         # Ensure default groups exist
         self.Datapoints.setdefault(ModbusDefaultGroups.CONFIG, {})

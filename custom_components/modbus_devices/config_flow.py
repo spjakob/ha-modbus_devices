@@ -141,24 +141,17 @@ MODE_SCHEMA = vol.Schema(
 """ ################################################### """
 # Schema returning correct schema based on device mode
 async def getDeviceSchema(user_input: dict[str, Any] | None = None, ports = None) -> vol.Schema:
-    raw_mode = user_input.get(CONF_DEVICE_MODE, DeviceMode.TCPIP.value)
+    device_mode = user_input.get(CONF_DEVICE_MODE, DeviceMode.TCPIP.value)
 
-    try:
-        device_mode = DeviceMode(raw_mode)
-    except ValueError:
-        _LOGGER.warning("Invalid device mode %s, defaulting to TCPIP", raw_mode)
-        device_mode = DeviceMode.TCPIP
-
-    if device_mode == DeviceMode.TCPIP:
+    if device_mode == DeviceMode.TCPIP.value:
         return await getTcpIpDeviceSchema(user_input)
-    elif device_mode == DeviceMode.RTU:
+    elif device_mode == DeviceMode.RTU.value:
         return await getRtuDeviceSchema(user_input, ports)
     
     return vol.Schema({})
 
 # Schema taking device details when adding or updating tcp/ip device
 async def getTcpIpDeviceSchema(user_input: dict[str, Any] | None = None) -> vol.Schema:
-    _LOGGER.debug("In TCPIP")
     DEVICE_MODELS = sorted(await get_available_drivers())
 
     data_schema = vol.Schema(
@@ -176,7 +169,6 @@ async def getTcpIpDeviceSchema(user_input: dict[str, Any] | None = None) -> vol.
 
 # Schema taking device details when adding or updating RTU device
 async def getRtuDeviceSchema(user_input: dict[str, Any] | None = None, ports = None) -> vol.Schema:
-    _LOGGER.debug("In RTU")
     DEVICE_MODELS = sorted(await get_available_drivers())
     baud_rates = [9600, 14400, 19200, 38400, 57600, 115200, 230400, 460800, 921600]
 
