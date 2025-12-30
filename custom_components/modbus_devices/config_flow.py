@@ -141,11 +141,12 @@ MODE_SCHEMA = vol.Schema(
 """ ################################################### """
 # Schema returning correct schema based on device mode
 async def getDeviceSchema(user_input: dict[str, Any] | None = None, ports = None) -> vol.Schema:
-    device_mode = user_input.get(CONF_DEVICE_MODE, DeviceMode.TCPIP.value)
+    raw_mode = user_input.get(CONF_DEVICE_MODE, DeviceMode.TCPIP)
+    device_mode = raw_mode if isinstance(raw_mode, DeviceMode) else DeviceMode(raw_mode)
 
-    if device_mode == DeviceMode.TCPIP.value:
+    if device_mode == DeviceMode.TCPIP:
         return await getTcpIpDeviceSchema(user_input)
-    elif device_mode == DeviceMode.RTU.value:
+    elif device_mode == DeviceMode.RTU:
         return await getRtuDeviceSchema(user_input, ports)
     
     return vol.Schema({})
