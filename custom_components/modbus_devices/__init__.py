@@ -36,19 +36,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     # Load config data
-    device_mode_value = entry.data.get(CONF_DEVICE_MODE, DeviceMode.TCPIP.value)
+    device_mode_value = entry.data.get(CONF_DEVICE_MODE)
 
-    # Convert legacy integer values to enum members
-    if isinstance(device_mode_value, int):
-        if device_mode_value == 0:
-            device_mode = DeviceMode.TCPIP
-        elif device_mode_value == 1:
-            device_mode = DeviceMode.RTU
-        else:
-            # Handle invalid legacy value, or use default
-            device_mode = DeviceMode.TCPIP
-    else:
+    try:
         device_mode = DeviceMode(device_mode_value)
+    except (ValueError, TypeError):
+        _LOGGER.error(
+            "Invalid or missing device mode %r in entry %s",
+            device_mode_value,
+            entry.entry_id,
+        )
+        return False
 
     name = entry.data[CONF_NAME]
     device_model = entry.data.get(CONF_DEVICE_MODEL, None)

@@ -95,7 +95,7 @@ class Device(ModbusDevice):
 
         # SENSORS - Read
         self.Datapoints[GROUP_SENSORS] = {
-            "Fresh Air Temp": ModbusDatapoint(Address=6200, Scaling=0.1, DataType=ModbusSensorData(deviceClass=NumberDeviceClass.TEMPERATURE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfTemperature.CELSIUS)),
+            "Fresh Air Temp": ModbusDatapoint(Address=6200, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.TEMPERATURE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfTemperature.CELSIUS)),
             "Supply Temp before re-heater": ModbusDatapoint(Address=6201, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),
             "Supply Temp": ModbusDatapoint(Address=6202, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),
             "Extract Temp": ModbusDatapoint(Address=6203, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),
