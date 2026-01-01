@@ -32,6 +32,7 @@ CONF_SERIAL: str = "serial"
 CONF_SERIAL_PORT: str = "serial_port"
 CONF_SERIAL_BAUD: str = "serial_baud"
 
-class DeviceMode(Enum):
-    TCPIP = "tcpip"
-    RTU = "rtu"
+# Device modes
+DEVICE_MODE_TCPIP = "tcpip"
+DEVICE_MODE_RTU = "rtu"
+DEVICE_MODES = [DEVICE_MODE_TCPIP, DEVICE_MODE_RTU]

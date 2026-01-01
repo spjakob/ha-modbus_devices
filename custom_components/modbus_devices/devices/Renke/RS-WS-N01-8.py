@@ -6,7 +6,7 @@ from ..datatypes import ModbusSensorData
 
 from homeassistant.const import UnitOfTemperature
 from homeassistant.const import PERCENTAGE
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,6 +21,6 @@ class Device(ModbusDevice):
     def loadDatapoints(self):
         # SENSORS - Read-only
         self.Datapoints[GROUP_SENSORS] = {
-            "Humidity": ModbusDatapoint(Address=0, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.HUMIDITY, units=PERCENTAGE)),
-            "Temperature": ModbusDatapoint(Address=1, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),
+            "Humidity": ModbusDatapoint(Address=0, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.HUMIDITY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
+            "Temperature": ModbusDatapoint(Address=1, Scaling=0.1, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.TEMPERATURE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfTemperature.CELSIUS)),
         }

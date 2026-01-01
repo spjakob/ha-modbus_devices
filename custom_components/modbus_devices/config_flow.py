@@ -13,7 +13,7 @@ from typing import Any
 from .const import DOMAIN, CONF_DEVICE_MODE, CONF_NAME, CONF_DEVICE_MODEL, CONF_IP, CONF_PORT, CONF_SLAVE_ID, CONF_SCAN_INTERVAL, CONF_SCAN_INTERVAL_FAST
 from .const import CONF_MODE_SELECTION, CONF_ADD_TCPIP, CONF_ADD_RTU
 from .const import CONF_SERIAL_PORT, CONF_SERIAL_BAUD
-from .const import DeviceMode
+from .const import DEVICE_MODE_TCPIP, DEVICE_MODE_RTU
 from .const import DEFAULT_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_FAST
 
 from .devices.helpers import get_available_drivers
@@ -21,7 +21,7 @@ from .devices.helpers import get_available_drivers
 CONFIG_ENTRY_NAME = "Modbus Devices"
 
 DEVICE_DATA_TCPIP = {
-    CONF_DEVICE_MODE: DeviceMode.TCPIP,
+    CONF_DEVICE_MODE: DEVICE_MODE_TCPIP,
     CONF_NAME: "",
     CONF_DEVICE_MODEL: None,
     CONF_IP: "192.168.1.1",
@@ -32,7 +32,7 @@ DEVICE_DATA_TCPIP = {
 }
 
 DEVICE_DATA_RTU = {
-    CONF_DEVICE_MODE: DeviceMode.RTU, 
+    CONF_DEVICE_MODE: DEVICE_MODE_RTU, 
     CONF_NAME: "", 
     CONF_DEVICE_MODEL: None,
     CONF_SERIAL_PORT: "",
@@ -58,10 +58,10 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             if user_input.get(CONF_MODE_SELECTION) == CONF_ADD_TCPIP:
-                self.selected_mode = DeviceMode.TCPIP
+                self.selected_mode = DEVICE_MODE_TCPIP
                 return await self.async_step_add_tcpip()
             if user_input.get(CONF_MODE_SELECTION) == CONF_ADD_RTU:
-                self.selected_mode = DeviceMode.RTU    
+                self.selected_mode = DEVICE_MODE_RTU 
                 return await self.async_step_add_rtu()           
                 #errors["base"] = "mode_not_implemented"
 
@@ -72,12 +72,12 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            user_input[CONF_DEVICE_MODE] = DeviceMode.TCPIP
+            user_input[CONF_DEVICE_MODE] = DEVICE_MODE_TCPIP
             return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
 
         # Copy ip from existing integration, just for convenience
         existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-        filtered_entries = [entry for entry in existing_entries if entry.data.get(CONF_DEVICE_MODE) == DeviceMode.TCPIP]
+        filtered_entries = [entry for entry in existing_entries if entry.data.get(CONF_DEVICE_MODE) == DEVICE_MODE_TCPIP]
         if filtered_entries:
             last_entry = filtered_entries[-1]
             DEVICE_DATA_TCPIP[CONF_DEVICE_MODEL] = last_entry.data[CONF_DEVICE_MODEL]
@@ -92,12 +92,12 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         ports = await async_get_ports()
 
         if user_input is not None:
-            user_input[CONF_DEVICE_MODE] = DeviceMode.RTU
+            user_input[CONF_DEVICE_MODE] = DEVICE_MODE_RTU
             return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
 
         # Copy ip from existing integration, just for convenience
         existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-        filtered_entries = [entry for entry in existing_entries if entry.data.get(CONF_DEVICE_MODE) == DeviceMode.RTU]
+        filtered_entries = [entry for entry in existing_entries if entry.data.get(CONF_DEVICE_MODE) == DEVICE_MODE_RTU]
         if filtered_entries:
             last_entry = filtered_entries[-1]
             DEVICE_DATA_RTU[CONF_DEVICE_MODEL] = last_entry.data[CONF_DEVICE_MODEL]
@@ -113,9 +113,10 @@ class ModbusOptionsFlowHandler(OptionsFlow):
         ports = await async_get_ports()
 
         if user_input is not None:
-            # Update config_entry with new data
+            data = {**self.config_entry.data, **user_input}
+
             self.hass.config_entries.async_update_entry(
-                self.config_entry, title=user_input[CONF_NAME], data=user_input, options=self.config_entry.options
+                self.config_entry, title=data[CONF_NAME], data=data, options=self.config_entry.options,
             )
 
             return self.async_create_entry(title="", data={})
@@ -141,12 +142,11 @@ MODE_SCHEMA = vol.Schema(
 """ ################################################### """
 # Schema returning correct schema based on device mode
 async def getDeviceSchema(user_input: dict[str, Any] | None = None, ports = None) -> vol.Schema:
-    raw_mode = user_input.get(CONF_DEVICE_MODE, DeviceMode.TCPIP)
-    device_mode = raw_mode if isinstance(raw_mode, DeviceMode) else DeviceMode(raw_mode)
+    device_mode = user_input.get(CONF_DEVICE_MODE)
 
-    if device_mode == DeviceMode.TCPIP:
+    if device_mode == DEVICE_MODE_TCPIP:
         return await getTcpIpDeviceSchema(user_input)
-    elif device_mode == DeviceMode.RTU:
+    elif device_mode == DEVICE_MODE_RTU:
         return await getRtuDeviceSchema(user_input, ports)
     
     return vol.Schema({})

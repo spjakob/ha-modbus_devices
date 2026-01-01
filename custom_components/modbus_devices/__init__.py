@@ -12,8 +12,8 @@ from homeassistant.const import CONF_DEVICES
 from .const import (
     DOMAIN,
     PLATFORMS,
-    CONF_DEVICE_MODE,
     CONF_NAME,
+    CONF_DEVICE_MODE,
     CONF_DEVICE_MODEL,
     CONF_IP,
     CONF_PORT,
@@ -21,10 +21,10 @@ from .const import (
     CONF_SERIAL_BAUD,
     CONF_SLAVE_ID,
     CONF_SCAN_INTERVAL,
-    CONF_SCAN_INTERVAL_FAST
+    CONF_SCAN_INTERVAL_FAST,
+    DEVICE_MODE_TCPIP, DEVICE_MODE_RTU
 )
 
-from .const import DeviceMode
 from .coordinator import ModbusCoordinator
 from .devices.connection import TCPConnectionParams, RTUConnectionParams
 
@@ -36,29 +36,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     # Load config data
-    device_mode_value = entry.data.get(CONF_DEVICE_MODE)
-
-    try:
-        device_mode = DeviceMode(device_mode_value)
-    except (ValueError, TypeError):
-        _LOGGER.error(
-            "Invalid or missing device mode %r in entry %s",
-            device_mode_value,
-            entry.entry_id,
-        )
-        return False
+    device_mode = entry.data.get(CONF_DEVICE_MODE)
 
     name = entry.data[CONF_NAME]
     device_model = entry.data.get(CONF_DEVICE_MODEL, None)
     scan_interval = entry.data[CONF_SCAN_INTERVAL]
     scan_interval_fast = entry.data[CONF_SCAN_INTERVAL_FAST]
 
-    if device_mode == DeviceMode.TCPIP:
+    if device_mode == DEVICE_MODE_TCPIP:
         ip = entry.data[CONF_IP]
         port = entry.data[CONF_PORT]
         slave_id = entry.data[CONF_SLAVE_ID]
         connection_params = TCPConnectionParams(ip, port, slave_id)
-    elif device_mode == DeviceMode.RTU:
+    elif device_mode == DEVICE_MODE_RTU:
         serial_port = entry.data[CONF_SERIAL_PORT]
         baudrate = entry.data[CONF_SERIAL_BAUD]
         connection_params = RTUConnectionParams(serial_port, baudrate) 
