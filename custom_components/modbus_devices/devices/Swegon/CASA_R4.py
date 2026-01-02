@@ -151,6 +151,7 @@ class Device(ModbusDevice):
 
         # UI datapoints that are calculated and not read directly over modbus
         self.Datapoints[GROUP_UI] = {
+            "Current Alarms": ModbusDatapoint(DataType=ModbusSensorData(icon="mdi:bell")),
             "Efficiency": ModbusDatapoint(DataType=ModbusSensorData(units=PERCENTAGE)),
         }       
 
@@ -184,3 +185,8 @@ class Device(ModbusDevice):
             if data.Value:
                 attrs.update({dataPointName:"ALARM"})
         alarms["Active Alarms"].Attrs = attrs
+
+        # Set alarm state on current alarms entity for summary
+        active = sorted(attrs.keys())
+        state = ", ".join(active) if active else "None"
+        self.Datapoints[GROUP_UI]["Current Alarms"].Value = state
