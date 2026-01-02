@@ -5,7 +5,7 @@ from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups, Modbu
 from ..datatypes import ModbusSensorData, ModbusNumberData, ModbusSelectData, ModbusBinarySensorData, ModbusSwitchData, ModbusButtonData
 
 from homeassistant.const import UnitOfTemperature, UnitOfTime
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import PERCENTAGE, REVOLUTIONS_PER_MINUTE
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.number import NumberDeviceClass
@@ -37,7 +37,7 @@ class Device(ModbusDevice):
 
         # COMMANDS2 - Write
         self.Datapoints[GROUP_COMMANDS2] = {
-            "Reset Alarms": ModbusDatapoint(Address=5406, DataType=ModbusButtonData()),
+            "Reset Alarms": ModbusDatapoint(Address=5405, DataType=ModbusButtonData()),
         }
 
         # SETPOINTS - Read/Write
@@ -109,26 +109,25 @@ class Device(ModbusDevice):
             "CO2 Unfiltered": ModbusDatapoint(Address=6211, Scaling=1.0),
             "CO2 Filtered": ModbusDatapoint(Address=6212, Scaling=1.0),
             "Relative Humidity": ModbusDatapoint(Address=6213, Scaling=1.0, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.HUMIDITY, units=PERCENTAGE)),
-            "Absolute Humidity": ModbusDatapoint(Address=6214, Scaling=0.1, DataType=ModbusSensorData(units="g/m³")),
+            "Absolute Humidity": ModbusDatapoint(Address=6214, Scaling=0.1, DataType=ModbusSensorData(units="g/m³", icon="mdi:water")),
             "Absolute Humidity SP": ModbusDatapoint(Address=6215, Scaling=0.1),
             "VOC": ModbusDatapoint(Address=6216, Scaling=1.0),
             "Supply Pressure": ModbusDatapoint(Address=6217, Scaling=1.0),
             "Exhaust Pressure": ModbusDatapoint(Address=6218, Scaling=1.0),
             "Supply Flow": ModbusDatapoint(Address=6219, Scaling=3.6),
             "Exhaust Flow": ModbusDatapoint(Address=6220, Scaling=3.6),
-            "Heat Exchanger": ModbusDatapoint(Address=6233, DataType=ModbusSensorData(units=PERCENTAGE)),
         }
 
         # UNIT_STATUSES - Read
         self.Datapoints[GROUP_UNIT_STATUSES] = {
             "Unit_state": ModbusDatapoint(Address=6300),
             "Speed_state": ModbusDatapoint(Address=6301),
-            "Supply Fan": ModbusDatapoint(Address=6302, DataType=ModbusSensorData(units=PERCENTAGE)),
-            "Exhaust Fan": ModbusDatapoint(Address=6303, DataType=ModbusSensorData(units=PERCENTAGE)),
+            "Supply Fan": ModbusDatapoint(Address=6302, DataType=ModbusSensorData(units=PERCENTAGE, icon="mdi:fan")),
+            "Exhaust Fan": ModbusDatapoint(Address=6303, DataType=ModbusSensorData(units=PERCENTAGE, icon="mdi:fan")),
             "Supply_Fan_RPM": ModbusDatapoint(Address=6304),
             "Exhaust_Fan_RPM": ModbusDatapoint(Address=6305),
-            "NotUsed": ModbusDatapoint(Address=6306, Length=10),
-            "Heating Output": ModbusDatapoint(Address=6316, DataType=ModbusSensorData(units=PERCENTAGE)),            
+            "Heating Output": ModbusDatapoint(Address=6316, DataType=ModbusSensorData(units=PERCENTAGE, icon="mdi:radiator")),   
+            "Heat Exchanger": ModbusDatapoint(Address=6331, DataType=ModbusSensorData(units=PERCENTAGE, icon="mdi:hvac")),         
         }
 
         # CONFIGURATION - Read/Write
@@ -152,7 +151,7 @@ class Device(ModbusDevice):
         # UI datapoints that are calculated and not read directly over modbus
         self.Datapoints[GROUP_UI] = {
             "Current Alarms": ModbusDatapoint(DataType=ModbusSensorData(icon="mdi:bell")),
-            "Efficiency": ModbusDatapoint(DataType=ModbusSensorData(units=PERCENTAGE)),
+            "Efficiency": ModbusDatapoint(DataType=ModbusSensorData(units=PERCENTAGE, icon="mdi:percent")),
         }       
 
     def onAfterFirstRead(self):
