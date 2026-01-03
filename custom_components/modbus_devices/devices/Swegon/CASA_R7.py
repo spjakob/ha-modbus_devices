@@ -20,7 +20,7 @@ class Device(BaseDevice):
 
         # Replace HE output with HE RPM
         self.Datapoints[GROUP_UNIT_STATUSES].pop("Heat Exchanger")
-        self.Datapoints[GROUP_SENSORS]["Heat Exchanger RPM"] = ModbusDatapoint(Address=6233, Scaling=1.0, DataType=ModbusSensorData(units=REVOLUTIONS_PER_MINUTE, icon="mdi:hvac")),
+        self.Datapoints[GROUP_SENSORS]["Heat Exchanger RPM"] = ModbusDatapoint(Address=6233, Scaling=1.0, DataType=ModbusSensorData(units=REVOLUTIONS_PER_MINUTE, icon="mdi:hvac"))
 
         self.Datapoints[ModbusDefaultGroups.CONFIG]["Night Cooling FreshAir Max"].Scaling=1
         self.Datapoints[ModbusDefaultGroups.CONFIG]["Night Cooling FreshAir Start"].Scaling=1
