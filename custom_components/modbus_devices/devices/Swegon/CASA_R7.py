@@ -1,5 +1,5 @@
 import logging
-from .CASA_R4 import GROUP_SETPOINTS, GROUP_UNIT_STATUSES, ModbusDefaultGroups, GROUP_SENSORS, GROUP_UI, Device as BaseDevice
+from .CASA_Base import GROUP_SETPOINTS, GROUP_UNIT_STATUSES, ModbusDefaultGroups, GROUP_SENSORS, GROUP_UI, Device as BaseDevice
 from ..datatypes import ModbusDatapoint, ModbusSensorData
 from homeassistant.const import PERCENTAGE, REVOLUTIONS_PER_MINUTE
 

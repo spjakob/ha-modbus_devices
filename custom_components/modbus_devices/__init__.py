@@ -27,6 +27,7 @@ from .const import (
 
 from .coordinator import ModbusCoordinator
 from .devices.connection import TCPConnectionParams, RTUConnectionParams
+from .rtu_bus import RTUBusManager, RTUBusClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +44,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     scan_interval = entry.data[CONF_SCAN_INTERVAL]
     scan_interval_fast = entry.data[CONF_SCAN_INTERVAL_FAST]
 
+    rtu_bus = None
+
     if device_mode == DEVICE_MODE_TCPIP:
         ip = entry.data[CONF_IP]
         port = entry.data[CONF_PORT]
@@ -51,7 +54,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     elif device_mode == DEVICE_MODE_RTU:
         serial_port = entry.data[CONF_SERIAL_PORT]
         baudrate = entry.data[CONF_SERIAL_BAUD]
-        connection_params = RTUConnectionParams(serial_port, baudrate) 
+        connection_params = RTUConnectionParams(serial_port, baudrate)
+
+        # ----- RTU bus setup -----
+        rtu_buses = hass.data.setdefault(DOMAIN, {}).setdefault("rtu_buses", {})
+        bus = rtu_buses.get(serial_port)
+
+        if bus is None:
+            # First device on this port → create bus
+            bus = RTUBusManager(hass=hass, port=serial_port, baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0)
+            rtu_buses[serial_port] = bus
+        else:
+            # Validate settings
+            if not bus.matches_serial_config(baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0):
+                _LOGGER.error("Serial port %s already in use with different settings", serial_port)
+                return False
+
+        bus.attach(entry.entry_id)
+        rtu_bus = bus  # pass bus to device / coordinator
+
     else:
         _LOGGER.error(f"Unsupported device mode: {device_mode}")
         return False    
@@ -68,7 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Set up coordinator
-    coordinator = ModbusCoordinator(hass, dev, device_model, connection_params, scan_interval, scan_interval_fast)
+    coordinator = ModbusCoordinator(hass, dev, device_model, connection_params, scan_interval, scan_interval_fast, rtu_bus=rtu_bus)
     hass.data[DOMAIN][entry.entry_id] = coordinator
     
     # Might throw ConfigEntryNotReady, which should cause retry later

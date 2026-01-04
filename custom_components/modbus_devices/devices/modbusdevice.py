@@ -11,6 +11,7 @@ from .connection import ConnectionParams, TCPConnectionParams, RTUConnectionPara
 
 from .datatypes import ModbusMode, ModbusPollMode, ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
 from .datatypes import ModbusSelectData, ModbusNumberData
+from ..rtu_bus import RTUBusManager, RTUBusClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,11 +22,12 @@ class ModbusDevice():
     sw_version = None
     serial_number = None
 
-    def __init__(self, connection_params: ConnectionParams):
+    def __init__(self, connection_params: ConnectionParams, rtu_bus: RTUBusManager):
         if isinstance(connection_params, TCPConnectionParams):
             self._client = AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port)
         elif isinstance(connection_params, RTUConnectionParams):
-            self._client = AsyncModbusSerialClient(port=connection_params.serial_port, baudrate=connection_params.baud_rate)
+            #self._client = AsyncModbusSerialClient(port=connection_params.serial_port, baudrate=connection_params.baud_rate)
+            self._client = RTUBusClient(rtu_bus)
         else:
             raise ValueError("Unsupported connection parameters")
         self._slave_id = connection_params.slave_id

@@ -1,11 +1,10 @@
 import logging
-from .CASA_R4 import GROUP_SETPOINTS, Device as BaseDevice
+from .CASA_Base import GROUP_SETPOINTS, Device as BaseDevice
 
 _LOGGER = logging.getLogger(__name__)
 
 class Device(BaseDevice):
     # Override static device information
-    manufacturer="Swegon"
     model="CASA R15"
 
     def loadDatapoints(self):

@@ -12,7 +12,7 @@ from .devices.datatypes import ModbusDefaultGroups
 _LOGGER = logging.getLogger(__name__)
 
 class ModbusCoordinator(DataUpdateCoordinator):    
-    def __init__(self, hass, device, device_model:str, connection_params, scan_interval, scan_interval_fast):
+    def __init__(self, hass, device, device_model:str, connection_params, scan_interval, scan_interval_fast, rtu_bus):
         """Initialize coordinator parent"""
         super().__init__(
             hass,
@@ -25,6 +25,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
 
         self.device_model = device_model
         self.connection_params = connection_params
+        self.rtu_bus = rtu_bus
 
         self._fast_poll_enabled = False
         self._fast_poll_count = 0
@@ -46,7 +47,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
         device_class = await load_device_class(self.device_model)
         if device_class is not None:
             try:
-                self._modbusDevice = device_class(self.connection_params)
+                self._modbusDevice = device_class(self.connection_params, self.rtu_bus)
             except Exception as err:
                 raise ConfigEntryNotReady("Could not read data from device!") from err
         else:
@@ -93,10 +94,10 @@ class ModbusCoordinator(DataUpdateCoordinator):
         """ Fetch data """
         try:
             async with async_timeout.timeout(20):
-                await self._modbusDevice.readData()
+                await self._modbusDevice.readData()       
         except Exception as err:
-            _LOGGER.debug("Failed when fetching data: %s", traceback.format_exc())
-            raise UpdateFailed("Could not read data from device!") from err
+            _LOGGER.debug("Failed to update %s: %s", self.devicename, err)
+            raise UpdateFailed from err
         
         await self._async_update_deviceInfo()
 
