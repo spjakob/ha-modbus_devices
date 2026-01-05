@@ -1,18 +1,19 @@
-# Datatypes
+# EntityData
 
-Datatypes are one of the properties of Datapoints. They define how the datapoint is displayed in Home Assistant.
+EntityData is one of the properties of Datapoints. They define how the datapoint is displayed in Home Assistant.
 
 ## Common parameters
 
-All DataTypes can take the following parameters:
+All EntityDatas can take the following parameters:
 
 | Parameter   | Type       | Default  | Description              |
 |-------------|------------|----------|--------------------------|
+| attrs       | dict       | None     | Dict for attributes      |
 | deviceClass | str        | None     | Device Class             |
 | category    | str        | None     | Category (CONFIG etc)    |
 | icon        | str        | None     | "mdi:thermometer" etc    |
 
-## ModbusSensorData
+## EntityDataSensor
 
 This creates a "Sensor" entity. Typically used for most readonly values.
 
@@ -21,15 +22,15 @@ Parameters:
 |-------------|------------|----------|----------------------------|
 | stateClass  | str        | None     | Sensor State Class         |
 | units       | str        | None     | Units                      |
-| enum        | Dict       | None     | {0: "Value0", 1: "Value1"} |
+| enum        | dict       | None     | {0: "Value0", 1: "Value1"} |
 
 ```
 Datapoints[MY_GROUP] = {  
-	"DatapointName": ModbusDatapoint(Address=0, DataType=ModbusSensorData(deviceClass=SensorDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),  
+	"DatapointName": ModbusDatapoint(address=0, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),  
 }
 ```
 
-## ModbusNumberData
+## EntityDataNumber
 
 This creates a "Number" entity. Typically used for numeric input.
 
@@ -43,11 +44,11 @@ Parameters:
 
 ```
 Datapoints[MY_GROUP] = {  
-	"DatapointName": ModbusDatapoint(Address=0, DataType=ModbusNumberData(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature, min_value=10, max_value=30, step=2)),  
+	"DatapointName": ModbusDatapoint(address=0, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature, min_value=10, max_value=30, step=2)),  
 }
 ```
 
-## ModbusSelectData
+## EntityDataSelect
 
 This creates a "Select" entity. This creates a dropdown/select for enumerated values.
 
@@ -58,11 +59,11 @@ Parameters:
 
 ```
 Datapoints[MY_GROUP] = {
-	"DatapointName": ModbusDatapoint(Address=0, DataType=ModbusSelectData(options={0: "Stopped", 1: "Running", 2: "Error"})),
+	"DatapointName": ModbusDatapoint(address=0, entity_data=EntityDataSelect(options={0: "Stopped", 1: "Running", 2: "Error"})),
 }
 ```
 
-## ModbusBinarySensorData
+## EntityDataBinarySensor
 
 This creates a "BinarySensor" entity. Typically used to display binary values.
 Use device class to get more specific texts in the UI.
@@ -71,11 +72,11 @@ This type has no specific parameters.
 
 ```
 Datapoints[MY_GROUP] = {
-	"DatapointName": ModbusDatapoint(Address=0, DataType=ModbusBinarySensorData(deviceClass=BinarySensorDeviceClass.OCCUPANCY)),
+	"DatapointName": ModbusDatapoint(address=0, entity_data=EntityDataBinarySensor(deviceClass=BinarySensorDeviceClass.OCCUPANCY)),
 }
 ```
 
-## ModbusSwitchData
+## EntityDataSwitch
 
 This creates a "Switch" entity. Typically used for writable binary values.
 
@@ -83,11 +84,11 @@ This type has no specific parameters.
 
 ```
 Datapoints[MY_GROUP] = {
-	"DatapointName": ModbusDatapoint(Address=0, DataType=ModbusSwitchData()),
+	"DatapointName": ModbusDatapoint(address=0, entity_data=EntityDataSwitch()),
 }
 ```
 
-## ModbusButtonData
+## EntityDataButton
 
 This creates a "Button" entity. A button press will set the corresponding tag.
 
@@ -95,6 +96,6 @@ This type has no specific parameters.
 
 ```
 Datapoints[MY_GROUP] = {
-	"DatapointName": ModbusDatapoint(Address=0, DataType=ModbusButtonData()),
+	"DatapointName": ModbusDatapoint(address=0, entity_data=EntityDataButton()),
 }
 ```
