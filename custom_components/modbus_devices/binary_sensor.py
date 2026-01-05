@@ -6,7 +6,7 @@ from .const import DOMAIN
 from .coordinator import ModbusCoordinator
 from .entity import ModbusBaseEntity
 
-from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusDatapoint, ModbusBinarySensorData
+from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusDatapoint, EntityDataBinarySensor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -17,10 +17,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     # Load entities
     ha_entities = []
+
     for group, datapoints in coordinator._modbusDevice.Datapoints.items():
         if group != ModbusDefaultGroups.CONFIG:
             for key, datapoint in datapoints.items():
-                if isinstance(datapoint.DataType, ModbusBinarySensorData):
+                if isinstance(datapoint.entity_data, EntityDataBinarySensor):
                     ha_entities.append(ModbusBinarySensorEntity(coordinator, group, key, datapoint))
 
     async_add_entities(ha_entities, False)
@@ -33,7 +34,7 @@ class ModbusBinarySensorEntity(ModbusBaseEntity, BinarySensorEntity):
         super().__init__(coordinator, group, key, modbusDataPoint)
 
         """Sensor Entity properties"""
-        self._attr_device_class = modbusDataPoint.DataType.deviceClass
+        self._attr_device_class = modbusDataPoint.entity_data.deviceClass
 
     @property
     def is_on(self):

@@ -6,7 +6,7 @@ from .const import DOMAIN
 from .coordinator import ModbusCoordinator
 from .entity import ModbusBaseEntity
 
-from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusDatapoint, ModbusSensorData
+from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusDatapoint, EntityDataSensor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     for group, datapoints in coordinator._modbusDevice.Datapoints.items():
         if group != ModbusDefaultGroups.CONFIG:
             for key, datapoint in datapoints.items():
-                if isinstance(datapoint.DataType, ModbusSensorData):
+                if isinstance(datapoint.entity_data, EntityDataSensor):
                     ha_entities.append(ModbusSensorEntity(coordinator, group, key, datapoint))
 
     async_add_entities(ha_entities, False)
@@ -28,17 +28,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class ModbusSensorEntity(ModbusBaseEntity, SensorEntity):
     """Representation of a Sensor."""
 
-    def __init__(self, coordinator, group:ModbusGroup, key:str, modbusDataPoint:ModbusDatapoint):
+    def __init__(self, coordinator:ModbusCoordinator, group:ModbusGroup, key:str, modbusDataPoint:ModbusDatapoint):
         """Initialize ModbusBaseEntity."""
         super().__init__(coordinator, group, key, modbusDataPoint)
 
         """Sensor Entity properties"""
-        self._attr_device_class = modbusDataPoint.DataType.deviceClass
-        self._attr_state_class = modbusDataPoint.DataType.stateClass
-        self._attr_native_unit_of_measurement = modbusDataPoint.DataType.units
+        self._attr_device_class = modbusDataPoint.entity_data.deviceClass
+        self._attr_state_class = modbusDataPoint.entity_data.stateClass
+        self._attr_native_unit_of_measurement = modbusDataPoint.entity_data.units
 
         """Cusom Entity properties"""
-        self.enum = modbusDataPoint.DataType.enum
+        self.enum = modbusDataPoint.entity_data.enum
 
     @property
     def native_value(self):

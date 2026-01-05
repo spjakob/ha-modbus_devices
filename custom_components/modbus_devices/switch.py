@@ -6,7 +6,7 @@ from .const import DOMAIN
 from .coordinator import ModbusCoordinator
 from .entity import ModbusBaseEntity
 
-from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusDatapoint, ModbusSwitchData
+from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusDatapoint, EntityDataSwitch
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     for group, datapoints in coordinator._modbusDevice.Datapoints.items():
         if group != ModbusDefaultGroups.CONFIG:
             for key, datapoint in datapoints.items():
-                if isinstance(datapoint.DataType, ModbusSwitchData):
+                if isinstance(datapoint.entity_data, EntityDataSwitch):
                     ha_entities.append(ModbusSwitchEntity(coordinator, group, key, datapoint))
                 
     async_add_entities(ha_entities, False)

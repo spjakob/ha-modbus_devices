@@ -1,16 +1,14 @@
 import logging
 
-from typing import Dict
-
 from homeassistant.helpers.entity import EntityCategory
 
-from pymodbus.client import AsyncModbusTcpClient, AsyncModbusSerialClient
+from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
 from .connection import ConnectionParams, TCPConnectionParams, RTUConnectionParams
 
 from .datatypes import ModbusMode, ModbusPollMode, ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
-from .datatypes import ModbusSelectData, ModbusNumberData
+from .datatypes import EntityDataSelect, EntityDataNumber
 from ..rtu_bus import RTUBusManager, RTUBusClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,13 +24,12 @@ class ModbusDevice():
         if isinstance(connection_params, TCPConnectionParams):
             self._client = AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port)
         elif isinstance(connection_params, RTUConnectionParams):
-            #self._client = AsyncModbusSerialClient(port=connection_params.serial_port, baudrate=connection_params.baud_rate)
             self._client = RTUBusClient(rtu_bus)
         else:
             raise ValueError("Unsupported connection parameters")
         self._slave_id = connection_params.slave_id
 
-        self.Datapoints: Dict[ModbusGroup, Dict[str, ModbusDatapoint]] = {}
+        self.Datapoints: dict[ModbusGroup, dict[str, ModbusDatapoint]] = {}
         self.loadDatapoints()
         self.loadConfigUI()
         _LOGGER.debug("Loaded datapoints for %s %s", self.manufacturer, self.model)
@@ -57,8 +54,8 @@ class ModbusDevice():
         # Add Config UI if we have config values
         if self.Datapoints[ModbusDefaultGroups.CONFIG]:
             self.Datapoints[ModbusDefaultGroups.UI] = {
-                "Config Selection": ModbusDatapoint(DataType=ModbusSelectData(category=EntityCategory.CONFIG)),
-                "Config Value": ModbusDatapoint(DataType=ModbusNumberData(category=EntityCategory.CONFIG, min_value=0, max_value=65535, step=1))
+                "Config Selection": ModbusDatapoint(entity_data=EntityDataSelect(category=EntityCategory.CONFIG)),
+                "Config Value": ModbusDatapoint(entity_data=EntityDataNumber(category=EntityCategory.CONFIG, min_value=0, max_value=65535, step=1))
             }
 
     def loadDatapoints(self):
@@ -106,7 +103,7 @@ class ModbusDevice():
         MAX_REGISTERS_PER_READ = 125
 
         addresses = [
-            (dp.Address, dp.Length)
+            (dp.address, dp.length)
             for dp in self.Datapoints[group].values()
         ]
         start_addr = min(addr for addr, _ in addresses)
@@ -130,9 +127,9 @@ class ModbusDevice():
 
         # Process the registers and update data points
         for name, dp in self.Datapoints[group].items():
-            offset = dp.Address - start_addr
-            registers = response.registers[offset:offset + dp.Length]
-            dp.Value = self.process_registers(registers, dp.Scaling)
+            offset = dp.address - start_addr
+            registers = response.registers[offset:offset + dp.length]
+            dp.value = self.process_registers(registers, dp.scaling)
 
     """ ******************************************************* """
     """ **************** READ SINGLE VALUE ******************** """
@@ -144,10 +141,10 @@ class ModbusDevice():
             raise KeyError(f"Key '{key}' not found in group '{group}'")
 
         datapoint = self.Datapoints[group][key]
-        length = datapoint.Length
+        length = datapoint.length
 
         method = self._get_read_method(group.mode) 
-        response = await method(address=datapoint.Address, count=length, device_id=self._slave_id)
+        response = await method(address=datapoint.address, count=length, device_id=self._slave_id)
 
         # Handle Modbus errors
         if response.isError():
@@ -156,9 +153,9 @@ class ModbusDevice():
         _LOGGER.debug("Read data: %s", response.registers)
 
         registers = response.registers[:length]
-        datapoint.Value = self.process_registers(registers, datapoint.Scaling)
+        datapoint.value = self.process_registers(registers, datapoint.scaling)
 
-        return datapoint.Value
+        return datapoint.value
 
     """ ******************************************************* """
     """ **************** WRITE SINGLE VALUE ******************* """
@@ -170,12 +167,12 @@ class ModbusDevice():
             raise KeyError(f"Key '{key}' not found in group '{group}'")
 
         datapoint = self.Datapoints[group][key]
-        length = datapoint.Length
+        length = datapoint.length
         if length > 2:
             raise ValueError(f"Unsupported register length: {length}. Only 1 or 2 registers are supported.")
 
         # Scale the value
-        scaled_value = round(value / datapoint.Scaling)
+        scaled_value = round(value / datapoint.scaling)
         if scaled_value < 0:
             scaled_value = self.twos_complement(scaled_value, bits=16 * length)
 
@@ -186,7 +183,7 @@ class ModbusDevice():
             scaled_value >>= 16  # Shift the value to the next 16 bits
 
         # Write the registers
-        address = datapoint.Address
+        address = datapoint.address
         slave = self._slave_id
 
         if group.mode == ModbusMode.COILS:
@@ -204,7 +201,7 @@ class ModbusDevice():
             raise ModbusException(f"Failed to write value for key '{key}': {response}")
 
         # Update the cached value
-        datapoint.Value = value
+        datapoint.value = value
         _LOGGER.debug("Successfully wrote value for key '%s': %s", key, value)
 
     """ ******************************************************* """

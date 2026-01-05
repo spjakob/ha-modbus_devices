@@ -11,4 +11,4 @@ class Device(BaseDevice):
         super().loadDatapoints() 
 
         # Modify datapoints    
-        self.Datapoints[GROUP_SETPOINTS]["Temperature Setpoint"].Scaling = 1
+        self.Datapoints[GROUP_SETPOINTS]["Temperature Setpoint"].scaling = 1

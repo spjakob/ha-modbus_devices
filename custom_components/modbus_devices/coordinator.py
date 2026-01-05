@@ -8,6 +8,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .devices.helpers import load_device_class
 from .devices.datatypes import ModbusDefaultGroups
+from .devices.modbusdevice import ModbusDevice
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
 
         self._device = device
 
-        self._modbusDevice = None
+        self._modbusDevice: ModbusDevice | None = None
 
         # Storage for config selection
         self.config_selection = 0
@@ -138,13 +139,13 @@ class ModbusCoordinator(DataUpdateCoordinator):
     def get_value(self, group, key):
         if group in self._modbusDevice.Datapoints:
             if key in self._modbusDevice.Datapoints[group]:
-                return self._modbusDevice.Datapoints[group][key].Value
+                return self._modbusDevice.Datapoints[group][key].value
         return None
 
     def get_attrs(self, group, key):
         if group in self._modbusDevice.Datapoints:
             if key in self._modbusDevice.Datapoints[group]:
-                return self._modbusDevice.Datapoints[group][key].Attrs
+                return self._modbusDevice.Datapoints[group][key].entity_data.attrs
         return None
 
     async def write_value(self, group, key, value) -> bool:

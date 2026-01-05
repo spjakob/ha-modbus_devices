@@ -15,8 +15,8 @@ class ModbusBaseEntity(CoordinatorEntity):
         super().__init__(coordinator)
 
         """Generic Entity properties"""
-        self._attr_entity_category = modbusDataPoint.DataType.category
-        self._attr_icon = modbusDataPoint.DataType.icon
+        self._attr_entity_category = modbusDataPoint.entity_data.category
+        self._attr_icon = modbusDataPoint.entity_data.icon
         self._attr_name = "{} {}".format(self.coordinator.devicename, key)
         self._attr_unique_id = "{}-{}".format(self.coordinator.device_id, self.name)
         self._attr_device_info = {

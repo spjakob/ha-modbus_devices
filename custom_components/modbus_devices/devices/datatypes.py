@@ -1,45 +1,45 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, Optional
 import uuid
 
 ###########################################
 ###### DATA TYPES FOR HOME ASSISTANT ######
 ###########################################
 @dataclass
-class ModbusData:
-    deviceClass: str = None             # None | Load value from HA device class 
+class EntityData:
+    attrs: dict | None = None  # Home Assistant extra state attributes
     category: str = None                # None | "config" | "diagnostic"
+    deviceClass: str = None             # None | Load value from HA device class 
     icon: str = None                    # None | "mdi:thermometer"....
 
 @dataclass
-class ModbusSensorData(ModbusData):
+class EntityDataSensor(EntityData):
     stateClass: str = None              # None | Set to valid "SensorStateClass" to enable long term storage
     units: str = None                   # None | from homeassistant.const import UnitOf....
     enum: dict = field(default_factory=dict)
 
 @dataclass
-class ModbusNumberData(ModbusData):
+class EntityDataNumber(EntityData):
     units: str = None                   # None | from homeassistant.const import UnitOf....
     min_value: int = 0
     max_value: int = 65535
     step: int = 1
 
 @dataclass
-class ModbusSelectData(ModbusData):
+class EntityDataSelect(EntityData):
     options: dict = field(default_factory=dict)
 
 @dataclass
-class ModbusBinarySensorData(ModbusData):
+class EntityDataBinarySensor(EntityData):
     pass
 
 @dataclass
-class ModbusSwitchData(ModbusData):
+class EntityDataSwitch(EntityData):
     pass
 
 @dataclass
-class ModbusButtonData(ModbusData):
+class EntityDataButton(EntityData):
     pass
 
 ################################################
@@ -57,7 +57,7 @@ class ModbusPollMode(Enum):
     POLL_ONCE = 2       # Just read them once, for example for static configuration
 
 class ModbusGroup:
-    def __init__(self, mode, poll_mode):
+    def __init__(self, mode: ModbusMode, poll_mode: ModbusPollMode):
         # Initialize mode and poll_mode
         self.mode = mode
         self.poll_mode = poll_mode
@@ -96,9 +96,8 @@ class ModbusDefaultGroups(Enum):
 
 @dataclass
 class ModbusDatapoint:
-    Address: int = 0                                   # 0-indexed address
-    Length: int = 1                                     # Number of registers
-    Scaling: float = 1                                  # Multiplier for raw value      
-    Value: float = 0                                    # Scaled value
-    Attrs: Optional[Dict] = None                        # Dict for attributes
-    DataType: ModbusData = None                         # Entitiy parameters
+    address: int = 0                                   # 0-indexed address
+    length: int = 1                                     # Number of registers
+    scaling: float = 1                                  # Multiplier for raw value      
+    value: float = 0                                    # Scaled value
+    entity_data: EntityData | None = None               # Entity parameters
