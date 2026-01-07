@@ -6,7 +6,7 @@ from ..datatypes import EntityDataSensor, EntityDataNumber, EntityDataSelect
 
 from homeassistant.const import UnitOfTemperature
 from homeassistant.const import PERCENTAGE
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.number import NumberDeviceClass
 
 _LOGGER = logging.getLogger(__name__)
@@ -106,14 +106,14 @@ class Device(ModbusDevice):
                 f"Zone {i} Actual Temperature": ModbusDatapoint(
                     address=base_register,
                     scaling=0.1,
-                    entity_data=EntityDataSensor(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),
+                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.TEMPERATURE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfTemperature.CELSIUS)),
                 f"Zone {i} Actual Humidity": ModbusDatapoint(
                     address=base_register + 1,
                     scaling=0.1,
-                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.HUMIDITY, units=PERCENTAGE)),
+                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.HUMIDITY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
                 f"Zone {i} Actual Battery": ModbusDatapoint(
                     address=base_register + 2,
-                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.BATTERY, units=PERCENTAGE)),
+                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.BATTERY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
                 f"Zone {i} Actual Signal Strength": ModbusDatapoint(
                     address=base_register + 3),
                 f"Zone {i} Thermostat Address": ModbusDatapoint(

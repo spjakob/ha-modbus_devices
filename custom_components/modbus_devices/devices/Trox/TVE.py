@@ -7,7 +7,7 @@ from ..datatypes import EntityDataSensor, EntityDataNumber, EntityDataSelect, En
 from homeassistant.const import UnitOfVolumeFlowRate, UnitOfElectricPotential, UnitOfTime
 from homeassistant.const import PERCENTAGE, DEGREE
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.number import NumberDeviceClass
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class Device(ModbusDevice):
             "Position": ModbusDatapoint(address=4, scaling=0.01, entity_data=EntityDataSensor(units=PERCENTAGE)),
             "Position Degrees": ModbusDatapoint(address=5, entity_data=EntityDataSensor(units=DEGREE)),
             "Flowrate Percent": ModbusDatapoint(address=6, scaling=0.01, entity_data=EntityDataSensor(units=PERCENTAGE)),
-            "Flowrate Actual": ModbusDatapoint(address=7, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.VOLUME_FLOW_RATE, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
+            "Flowrate Actual": ModbusDatapoint(address=7, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.VOLUME_FLOW_RATE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
             "Analog Setpoint": ModbusDatapoint(address=8, scaling=0.001, entity_data=EntityDataSensor(units=UnitOfElectricPotential.VOLT)),
         }
 
