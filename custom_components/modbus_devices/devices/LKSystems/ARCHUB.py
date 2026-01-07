@@ -106,14 +106,14 @@ class Device(ModbusDevice):
                 f"Zone {i} Actual Temperature": ModbusDatapoint(
                     address=base_register,
                     scaling=0.1,
-                    entity_data=EntityDataSensor(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS)),
+                    entity_data=EntityDataSensor(deviceClass=NumberDeviceClass.TEMPERATURE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfTemperature.CELSIUS)),
                 f"Zone {i} Actual Humidity": ModbusDatapoint(
                     address=base_register + 1,
                     scaling=0.1,
-                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.HUMIDITY, units=PERCENTAGE)),
+                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.HUMIDITY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
                 f"Zone {i} Actual Battery": ModbusDatapoint(
                     address=base_register + 2,
-                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.BATTERY, units=PERCENTAGE)),
+                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.BATTERY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
                 f"Zone {i} Actual Signal Strength": ModbusDatapoint(
                     address=base_register + 3),
                 f"Zone {i} Thermostat Address": ModbusDatapoint(
@@ -132,7 +132,7 @@ class Device(ModbusDevice):
                 f"Zone {i} Target Temperature": ModbusDatapoint(
                     address=base_register, 
                     scaling=0.1, 
-                    entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
+                    entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.TEMPERATURE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
                 f"Zone {i} Override ": ModbusDatapoint(
                     address=base_register + 1, 
                     entity_data=EntityDataSelect(options={0: "Inactive", 1: "Active"})),

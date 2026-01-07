@@ -31,7 +31,7 @@ class Device(ModbusDevice):
             "Position": ModbusDatapoint(address=4, scaling=0.01, entity_data=EntityDataSensor(units=PERCENTAGE)),
             "Position Degrees": ModbusDatapoint(address=5, entity_data=EntityDataSensor(units=DEGREE)),
             "Flowrate Percent": ModbusDatapoint(address=6, scaling=0.01, entity_data=EntityDataSensor(units=PERCENTAGE)),
-            "Flowrate Actual": ModbusDatapoint(address=7, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.VOLUME_FLOW_RATE, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
+            "Flowrate Actual": ModbusDatapoint(address=7, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.VOLUME_FLOW_RATE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
             "Analog Setpoint": ModbusDatapoint(address=8, scaling=0.001, entity_data=EntityDataSensor(units=UnitOfElectricPotential.VOLT)),
         }
 
@@ -47,8 +47,8 @@ class Device(ModbusDevice):
             "106 Q Max Percent": ModbusDatapoint(address=106, scaling=0.01, entity_data=EntityDataNumber(units=PERCENTAGE, min_value=0, max_value=100, step=1)),
             "108 Action on Bus Timeout": ModbusDatapoint(address=108),
             "109 Bus Timeout": ModbusDatapoint(address=109, entity_data=EntityDataNumber(units=UnitOfTime.SECONDS, min_value=0, max_value=100, step=1)),
-            "120 Q Min": ModbusDatapoint(address=120, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
-            "121 Q Max": ModbusDatapoint(address=121, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
+            "120 Q Min": ModbusDatapoint(address=120, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
+            "121 Q Max": ModbusDatapoint(address=121, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
             "130 Modbus Address": ModbusDatapoint(address=130),
             "201 Volume Flow Unit": ModbusDatapoint(address=201),
             "231 Signal Voltage": ModbusDatapoint(address=231),
