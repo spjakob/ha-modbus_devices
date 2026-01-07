@@ -6,7 +6,7 @@ from ..datatypes import EntityDataSensor, EntityDataNumber, EntityDataSelect
 
 from homeassistant.const import UnitOfTemperature
 from homeassistant.const import PERCENTAGE
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.number import NumberDeviceClass
 
 _LOGGER = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ from ..datatypes import EntityDataSensor, EntityDataNumber, EntityDataSelect, En
 from homeassistant.const import UnitOfVolumeFlowRate, UnitOfElectricPotential, UnitOfTime
 from homeassistant.const import PERCENTAGE, DEGREE
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.number import NumberDeviceClass
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,8 +47,8 @@ class Device(ModbusDevice):
             "106 Q Max Percent": ModbusDatapoint(address=106, scaling=0.01, entity_data=EntityDataNumber(units=PERCENTAGE, min_value=0, max_value=100, step=1)),
             "108 Action on Bus Timeout": ModbusDatapoint(address=108),
             "109 Bus Timeout": ModbusDatapoint(address=109, entity_data=EntityDataNumber(units=UnitOfTime.SECONDS, min_value=0, max_value=100, step=1)),
-            "120 Q Min": ModbusDatapoint(address=120, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
-            "121 Q Max": ModbusDatapoint(address=121, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
+            "120 Q Min": ModbusDatapoint(address=120, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
+            "121 Q Max": ModbusDatapoint(address=121, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
             "130 Modbus Address": ModbusDatapoint(address=130),
             "201 Volume Flow Unit": ModbusDatapoint(address=201),
             "231 Signal Voltage": ModbusDatapoint(address=231),
