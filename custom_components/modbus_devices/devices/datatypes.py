@@ -99,6 +99,50 @@ class ModbusDefaultGroups(Enum):
 class ModbusDatapoint:
     address: int = 0                                   # 0-indexed address
     length: int = 1                                     # Number of registers
-    scaling: float = 1                                  # Multiplier for raw value      
-    value: float = 0                                    # Scaled value
+    scaling: float = 1                                  # Multiplier for raw value  
+    offset: float = 0.0                                 # Offset     
+    value: float = 0.0                                  # Scaled value, usually "read only"
     entity_data: EntityData | None = None               # Entity parameters
+
+    def from_raw(self, registers: list[int]) :
+        if len(registers) != self.length:
+            return
+
+        if self.length <= 2:
+            # Combine registers into a single value (big-endian)
+            combined_value = 0
+            for reg in registers:
+                combined_value = (combined_value << 16) | reg
+
+            newVal = self.twos_complement(combined_value)
+            self.value = newVal * self.scaling + self.offset
+        else:
+            # Assume this is a text string
+            try:
+                newVal = ''.join(chr(value) for value in registers)
+                self.value = newVal
+            except ValueError as e:
+                pass
+
+    def to_raw(self, value) -> list[int]:
+        scaled_value = int(round((value - self.offset) / self.scaling))
+        if scaled_value < 0:
+            scaled_value = self.twos_complement(scaled_value, bits=16 * self.length)
+
+        # Prepare the registers
+        registers = []
+        for _ in range(self.length):
+            registers.insert(0, scaled_value & 0xFFFF)  # Extract the least significant 16 bits
+            scaled_value >>= 16  # Shift the value to the next 16 bits
+
+        return registers
+
+    def twos_complement(self, number: int, bits: int = 16) -> int:
+        if number < 0:
+            return number  # If the number is negative, no need for two's complement conversion.
+        
+        max_value = (1 << bits)  # Maximum value for the given bit-width.
+        if number >= max_value // 2:
+            return number - max_value  # Convert to negative value in two's complement.
+        
+        return number  # Return the number as is if it's already non-negative.

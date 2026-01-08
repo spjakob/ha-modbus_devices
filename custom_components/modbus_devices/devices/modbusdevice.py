@@ -129,7 +129,7 @@ class ModbusDevice():
         for name, dp in self.Datapoints[group].items():
             offset = dp.address - start_addr
             registers = response.registers[offset:offset + dp.length]
-            dp.value = self.process_registers(registers, dp.scaling)
+            dp.from_raw(registers)
 
     """ ******************************************************* """
     """ **************** READ SINGLE VALUE ******************** """
@@ -153,7 +153,7 @@ class ModbusDevice():
         _LOGGER.debug("Read data: %s", response.registers)
 
         registers = response.registers[:length]
-        datapoint.value = self.process_registers(registers, datapoint.scaling)
+        datapoint.from_raw(registers)
 
         return datapoint.value
 
@@ -171,16 +171,8 @@ class ModbusDevice():
         if length > 2:
             raise ValueError(f"Unsupported register length: {length}. Only 1 or 2 registers are supported.")
 
-        # Scale the value
-        scaled_value = round(value / datapoint.scaling)
-        if scaled_value < 0:
-            scaled_value = self.twos_complement(scaled_value, bits=16 * length)
-
-        # Prepare the registers
-        registers = []
-        for _ in range(length):
-            registers.insert(0, scaled_value & 0xFFFF)  # Extract the least significant 16 bits
-            scaled_value >>= 16  # Shift the value to the next 16 bits
+        # Get value as modbus registers
+        registers = datapoint.to_raw(value)
 
         # Write the registers
         address = datapoint.address
@@ -218,33 +210,3 @@ class ModbusDevice():
             return dispatch[mode]
         except KeyError:
             raise ValueError(f"Unsupported Modbus mode: {mode}")
-
-    def twos_complement(self, number: int, bits: int = 16) -> int:
-        if number < 0:
-            return number  # If the number is negative, no need for two's complement conversion.
-        
-        max_value = (1 << bits)  # Maximum value for the given bit-width.
-        if number >= max_value // 2:
-            return number - max_value  # Convert to negative value in two's complement.
-        
-        return number  # Return the number as is if it's already non-negative.
-
-    def process_registers(self, registers: list[int], scaling: float) -> float | str:
-        length = len(registers)
-
-        if length <= 2:
-            # Combine registers into a single value (big-endian)
-            combined_value = 0
-            for reg in registers:
-                combined_value = (combined_value << 16) | reg
-
-            newVal = self.twos_complement(combined_value)
-            return newVal if scaling == 1.0 else newVal * scaling
-        else:
-            # Assume this is a text string
-            try:
-                newVal = ''.join(chr(value) for value in registers)
-                return newVal.rstrip('\x00')
-            except ValueError as e:
-                # Failed to decode text, most likely just registers we are ignoring
-                return registers
