@@ -16,7 +16,6 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 _LOGGER = logging.getLogger(__name__)
 
 # Define groups
-# The YAML specifies "input_type: input", so we use ModbusMode.INPUT
 GROUP_MAIN = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 
 class Device(ModbusDevice):
