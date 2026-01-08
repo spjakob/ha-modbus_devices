@@ -22,6 +22,7 @@ class ModbusBaseEntity(CoordinatorEntity):
         self._attr_device_info = {
             "identifiers": self.coordinator.identifiers,
         }
+        self._attr_entity_registry_enabled_default = modbusDataPoint.entity_data.enabledDefault
         
         """Store this entities keys."""
         self._group = group

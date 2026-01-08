@@ -11,6 +11,7 @@ class EntityData:
     attrs: dict | None = None  # Home Assistant extra state attributes
     category: str = None                # None | "config" | "diagnostic"
     deviceClass: str = None             # None | Load value from HA device class 
+    enabledDefault: bool = True         # Entity enabled by default
     icon: str = None                    # None | "mdi:thermometer"....
 
 @dataclass
