@@ -31,7 +31,6 @@ class Device(ModbusDevice):
             "Phase 1 Voltage": ModbusDatapoint(
                 address=0, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.VOLTAGE, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -41,7 +40,6 @@ class Device(ModbusDevice):
             "Phase 2 Voltage": ModbusDatapoint(
                 address=2, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.VOLTAGE, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -51,7 +49,6 @@ class Device(ModbusDevice):
             "Phase 3 Voltage": ModbusDatapoint(
                 address=4, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.VOLTAGE, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -63,7 +60,6 @@ class Device(ModbusDevice):
             "Phase 1 Current": ModbusDatapoint(
                 address=6, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.CURRENT, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -73,7 +69,6 @@ class Device(ModbusDevice):
             "Phase 2 Current": ModbusDatapoint(
                 address=8, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.CURRENT, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -83,7 +78,6 @@ class Device(ModbusDevice):
             "Phase 3 Current": ModbusDatapoint(
                 address=10, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.CURRENT, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -95,7 +89,6 @@ class Device(ModbusDevice):
             "Phase 1 Power": ModbusDatapoint(
                 address=12, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -105,7 +98,6 @@ class Device(ModbusDevice):
             "Phase 2 Power": ModbusDatapoint(
                 address=14, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -115,7 +107,6 @@ class Device(ModbusDevice):
             "Phase 3 Power": ModbusDatapoint(
                 address=16, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -127,7 +118,6 @@ class Device(ModbusDevice):
             "Total Power": ModbusDatapoint(
                 address=52, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER, 
                     stateClass=SensorStateClass.MEASUREMENT, 
@@ -139,7 +129,6 @@ class Device(ModbusDevice):
             "Total kWh Import": ModbusDatapoint(
                 address=72, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.ENERGY, 
                     stateClass=SensorStateClass.TOTAL_INCREASING, 
@@ -151,7 +140,6 @@ class Device(ModbusDevice):
             "Total kWh Export": ModbusDatapoint(
                 address=74, 
                 length=2, 
-                datatype="float32", 
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.ENERGY, 
                     stateClass=SensorStateClass.TOTAL_INCREASING, 
