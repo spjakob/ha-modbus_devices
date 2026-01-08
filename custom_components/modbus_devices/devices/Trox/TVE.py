@@ -28,11 +28,11 @@ class Device(ModbusDevice):
             "Setpoint Flowrate": ModbusDatapoint(address=0, scaling=0.01, entity_data=EntityDataNumber(units=PERCENTAGE, min_value=0, max_value=100, step=1)),
             "Override": ModbusDatapoint(address=1, entity_data=EntityDataSelect(options={0: "None", 1: "Open", 2: "Closed", 3: "Q Min", 4: "Q Max"})),
             "Command": ModbusDatapoint(address=2, entity_data=EntityDataSelect(options={0: "None", 1: "Synchronization", 2: "Test", 4: "Reset"})),
-            "Position": ModbusDatapoint(address=4, scaling=0.01, entity_data=EntityDataSensor(units=PERCENTAGE)),
-            "Position Degrees": ModbusDatapoint(address=5, entity_data=EntityDataSensor(units=DEGREE)),
-            "Flowrate Percent": ModbusDatapoint(address=6, scaling=0.01, entity_data=EntityDataSensor(units=PERCENTAGE)),
+            "Position": ModbusDatapoint(address=4, scaling=0.01, entity_data=EntityDataSensor(stateClass=SensorStateClass.MEASUREMENT,units=PERCENTAGE)),
+            "Position Degrees": ModbusDatapoint(address=5, entity_data=EntityDataSensor(stateClass=SensorStateClass.MEASUREMENT,units=DEGREE)),
+            "Flowrate Percent": ModbusDatapoint(address=6, scaling=0.01, entity_data=EntityDataSensor(stateClass=SensorStateClass.MEASUREMENT,units=PERCENTAGE)),
             "Flowrate Actual": ModbusDatapoint(address=7, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.VOLUME_FLOW_RATE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
-            "Analog Setpoint": ModbusDatapoint(address=8, scaling=0.001, entity_data=EntityDataSensor(units=UnitOfElectricPotential.VOLT)),
+            "Analog Setpoint": ModbusDatapoint(address=8, scaling=0.001, entity_data=EntityDataSensor(stateClass=SensorStateClass.MEASUREMENT,units=UnitOfElectricPotential.VOLT)),
         }
 
         # DEVICE_INFO - Read-only
