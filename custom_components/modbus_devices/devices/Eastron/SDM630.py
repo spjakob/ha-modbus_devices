@@ -35,8 +35,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.VOLTAGE, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfElectricPotential.VOLT,
-                    precision=1
+                    units=UnitOfElectricPotential.VOLT
                 )
             ),
             "Phase 2 Voltage": ModbusDatapoint(
@@ -46,8 +45,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.VOLTAGE, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfElectricPotential.VOLT,
-                    precision=1
+                    units=UnitOfElectricPotential.VOLT
                 )
             ),
             "Phase 3 Voltage": ModbusDatapoint(
@@ -57,8 +55,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.VOLTAGE, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfElectricPotential.VOLT,
-                    precision=1
+                    units=UnitOfElectricPotential.VOLT
                 )
             ),
 
@@ -70,8 +67,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.CURRENT, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfElectricCurrent.AMPERE,
-                    precision=2
+                    units=UnitOfElectricCurrent.AMPERE
                 )
             ),
             "Phase 2 Current": ModbusDatapoint(
@@ -81,8 +77,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.CURRENT, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfElectricCurrent.AMPERE,
-                    precision=2
+                    units=UnitOfElectricCurrent.AMPERE
                 )
             ),
             "Phase 3 Current": ModbusDatapoint(
@@ -92,8 +87,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.CURRENT, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfElectricCurrent.AMPERE,
-                    precision=2
+                    units=UnitOfElectricCurrent.AMPERE
                 )
             ),
 
@@ -105,8 +99,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfPower.WATT,
-                    precision=1
+                    units=UnitOfPower.WATT
                 )
             ),
             "Phase 2 Power": ModbusDatapoint(
@@ -116,8 +109,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfPower.WATT,
-                    precision=1
+                    units=UnitOfPower.WATT
                 )
             ),
             "Phase 3 Power": ModbusDatapoint(
@@ -127,8 +119,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfPower.WATT,
-                    precision=1
+                    units=UnitOfPower.WATT
                 )
             ),
 
@@ -140,8 +131,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER, 
                     stateClass=SensorStateClass.MEASUREMENT, 
-                    units=UnitOfPower.WATT,
-                    precision=1
+                    units=UnitOfPower.WATT                    
                 )
             ),
 
@@ -153,8 +143,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.ENERGY, 
                     stateClass=SensorStateClass.TOTAL_INCREASING, 
-                    units=UnitOfEnergy.KILO_WATT_HOUR,
-                    precision=1
+                    units=UnitOfEnergy.KILO_WATT_HOUR
                 )
             ),
 
@@ -166,8 +155,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.ENERGY, 
                     stateClass=SensorStateClass.TOTAL_INCREASING, 
-                    units=UnitOfEnergy.KILO_WATT_HOUR,
-                    precision=1
+                    units=UnitOfEnergy.KILO_WATT_HOUR
                 )
             ),
         }
