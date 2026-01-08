@@ -1,7 +1,10 @@
+import struct
+import uuid
+
 from collections import namedtuple
 from dataclasses import dataclass, field
 from enum import Enum
-import uuid
+from typing import Literal
 
 ###########################################
 ###### DATA TYPES FOR HOME ASSISTANT ######
@@ -101,48 +104,90 @@ class ModbusDatapoint:
     length: int = 1                                     # Number of registers
     scaling: float = 1                                  # Multiplier for raw value  
     offset: float = 0.0                                 # Offset     
-    value: float = 0.0                                  # Scaled value, usually "read only"
+    value: int | float | str = 0                        # Scaled value, usually "read only"
     entity_data: EntityData | None = None               # Entity parameters
+    type: Literal['int', 'float', 'string'] = 'int'     # Type of the datapoint
 
-    def from_raw(self, registers: list[int]) :
+    def from_raw(self, registers: list[int]):
         if len(registers) != self.length:
             return
 
-        if self.length <= 2:
-            # Combine registers into a single value (big-endian)
+        if self.type == 'int':
             combined_value = 0
             for reg in registers:
                 combined_value = (combined_value << 16) | reg
 
-            newVal = self.twos_complement(combined_value)
-            self.value = newVal * self.scaling + self.offset
-        else:
-            # Assume this is a text string
+            raw_value = self.twos_complement(combined_value, bits=16*self.length)
+
+            # Apply scaling and offset
+            self.value = raw_value * self.scaling + self.offset
+
+        elif self.type == 'float':
+            # Convert registers to IEEE 754 float (big-endian)
+            byte_array = bytearray()
+            for reg in registers:
+                byte_array += reg.to_bytes(2, byteorder='big')
+            
+            if self.length == 2:
+                raw_value = struct.unpack('>f', byte_array)[0]  # 32-bit float
+            elif self.length == 4:
+                raw_value = struct.unpack('>d', byte_array)[0]  # 64-bit double
+            else:
+                # Fallback: treat as integer
+                combined_value = int.from_bytes(byte_array, byteorder='big')
+                raw_value = combined_value
+            
+            # Apply scaling and offset
+            self.value = raw_value * self.scaling + self.offset
+
+        elif self.type == 'string':
             try:
-                newVal = ''.join(chr(value) for value in registers)
-                self.value = newVal
-            except ValueError as e:
-                pass
+                self.value = ''.join(chr(reg) for reg in registers)
+            except ValueError:
+                self.value = ''
 
     def to_raw(self, value) -> list[int]:
-        scaled_value = int(round((value - self.offset) / self.scaling))
-        if scaled_value < 0:
-            scaled_value = self.twos_complement(scaled_value, bits=16 * self.length)
+        if self.type == 'int':
+            # Reverse scaling and offset
+            scaled_value = int(round((value - self.offset) / self.scaling))
+            if scaled_value < 0:
+                scaled_value = self.twos_complement(scaled_value, bits=16*self.length)
 
-        # Prepare the registers
+        elif self.type == 'float':
+            # Reverse scaling and offset
+            scaled_value = (value - self.offset) / self.scaling
+            if self.length == 2:
+                bytes_value = struct.pack('>f', scaled_value)  # 32-bit float
+            elif self.length == 4:
+                bytes_value = struct.pack('>d', scaled_value)  # 64-bit double
+            else:
+                # Fallback: convert to integer
+                scaled_value = int(round(scaled_value))
+                bytes_value = scaled_value.to_bytes(self.length*2, byteorder='big', signed=False)
+
+            # Convert bytes to registers
+            registers = []
+            for i in range(0, len(bytes_value), 2):
+                registers.append(int.from_bytes(bytes_value[i:i+2], byteorder='big'))
+            return registers
+
+        elif self.type == 'string':
+            regs = [ord(c) for c in value]
+            while len(regs) < self.length:
+                regs.append(0)
+            return regs[:self.length]
+
+        # Default integer conversion to registers
         registers = []
         for _ in range(self.length):
-            registers.insert(0, scaled_value & 0xFFFF)  # Extract the least significant 16 bits
-            scaled_value >>= 16  # Shift the value to the next 16 bits
-
+            registers.insert(0, scaled_value & 0xFFFF)
+            scaled_value >>= 16
         return registers
 
     def twos_complement(self, number: int, bits: int = 16) -> int:
+        """Convert unsigned integer to signed integer using two's complement."""
         if number < 0:
-            return number  # If the number is negative, no need for two's complement conversion.
-        
-        max_value = (1 << bits)  # Maximum value for the given bit-width.
-        if number >= max_value // 2:
-            return number - max_value  # Convert to negative value in two's complement.
-        
-        return number  # Return the number as is if it's already non-negative.
+            return number
+        if number >= (1 << (bits - 1)):
+            number -= (1 << bits)
+        return number
