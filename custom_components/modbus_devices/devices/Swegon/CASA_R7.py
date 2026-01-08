@@ -25,26 +25,3 @@ class Device(BaseDevice):
         self.Datapoints[ModbusDefaultGroups.CONFIG]["Night Cooling FreshAir Start"].scaling=1
         self.Datapoints[ModbusDefaultGroups.CONFIG]["Night Cooling RoomTemp Start"].scaling=1
         self.Datapoints[ModbusDefaultGroups.CONFIG]["Night Cooling SupplyTemp Min"].scaling=1
-
-        self.Datapoints[GROUP_UI]["Supply temp Efficiency"] = ModbusDatapoint(entity_data=EntityDataSensor(units=PERCENTAGE))
-        self.Datapoints[GROUP_UI]["Extract temp Efficiency"] = ModbusDatapoint(entity_data=EntityDataSensor(units=PERCENTAGE))
-
-    def onAfterRead(self):
-        super().onAfterRead()
-
-        # Calculate efficiency
-        fresh = self.Datapoints[GROUP_SENSORS]["Fresh Air Temp"].value
-        sup = self.Datapoints[GROUP_SENSORS]["Supply Temp before re-heater"].value
-        extract = self.Datapoints[GROUP_SENSORS]["Extract Temp"].value
-        exhaust = self.Datapoints[GROUP_SENSORS]["Exhaust Temp"].value
-
-        try:
-            supefficiency = ((sup - fresh) / (extract - fresh)) * 100
-            self.Datapoints[GROUP_UI]["Supply temp Efficiency"].value = round(supefficiency, 1)
-        except ZeroDivisionError:
-            self.Datapoints[GROUP_UI]["Supply temp Efficiency"].value = 0
-        try:
-            exhefficiency = ((extract - exhaust) / (extract - fresh)) * 100
-            self.Datapoints[GROUP_UI]["Extract temp Efficiency"].value = round(exhefficiency, 1)
-        except ZeroDivisionError:
-            self.Datapoints[GROUP_UI]["Extract temp Efficiency"].value = 0

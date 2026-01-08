@@ -9,7 +9,7 @@ from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups, Modbu
 from ..datatypes import EntityDataSensor, EntityDataSelect, EntityDataNumber, EntityDataBinarySensor, EntityDataSwitch, EntityDataButton
 
 from homeassistant.const import UnitOfTemperature, UnitOfTime
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import PERCENTAGE, CONCENTRATION_PARTS_PER_MILLION
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.number import NumberDeviceClass
@@ -120,14 +120,14 @@ class Device(ModbusDevice):
             "Water Radiator Temp": ModbusDatapoint(address=6208, scaling=0.1),
             "Pre-Heater Temp": ModbusDatapoint(address=6209, scaling=0.1),
             "External Fresh Air Temp": ModbusDatapoint(address=6210, scaling=0.1),
-            "CO2 Unfiltered": ModbusDatapoint(address=6211, scaling=1.0),
-            "CO2 Filtered": ModbusDatapoint(address=6212, scaling=1.0),
-            "Relative Humidity": ModbusDatapoint(address=6213, scaling=1.0, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.HUMIDITY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
+            "CO2 Unfiltered": ModbusDatapoint(address=6211),
+            "CO2 Filtered": ModbusDatapoint(address=6212, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.CO2, stateClass=SensorStateClass.MEASUREMENT, units=CONCENTRATION_PARTS_PER_MILLION, enabledDefault=False)),
+            "Relative Humidity": ModbusDatapoint(address=6213, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.HUMIDITY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
             "Absolute Humidity": ModbusDatapoint(address=6214, scaling=0.1, entity_data=EntityDataSensor(units="g/m³", icon="mdi:water")),
             "Absolute Humidity SP": ModbusDatapoint(address=6215, scaling=0.1),
-            "VOC": ModbusDatapoint(address=6216, scaling=1.0),
-            "Supply Pressure": ModbusDatapoint(address=6217, scaling=1.0),
-            "Exhaust Pressure": ModbusDatapoint(address=6218, scaling=1.0),
+            "VOC": ModbusDatapoint(address=6216),
+            "Supply Pressure": ModbusDatapoint(address=6217),
+            "Exhaust Pressure": ModbusDatapoint(address=6218),
             "Supply Flow": ModbusDatapoint(address=6219, scaling=3.6),
             "Exhaust Flow": ModbusDatapoint(address=6220, scaling=3.6),
         }
@@ -166,6 +166,7 @@ class Device(ModbusDevice):
         self.Datapoints[GROUP_UI] = {
             "Current Alarms": ModbusDatapoint(entity_data=EntityDataSensor(icon="mdi:bell")),
             "Efficiency": ModbusDatapoint(entity_data=EntityDataSensor(units=PERCENTAGE, icon="mdi:percent")),
+            "Efficiency Extract": ModbusDatapoint(entity_data=EntityDataSensor(units=PERCENTAGE, icon="mdi:percent")),
         }       
 
     def onAfterFirstRead(self):
@@ -183,12 +184,20 @@ class Device(ModbusDevice):
         fresh = self.Datapoints[GROUP_SENSORS]["Fresh Air Temp"].value
         sup = self.Datapoints[GROUP_SENSORS]["Supply Temp before re-heater"].value
         extract = self.Datapoints[GROUP_SENSORS]["Extract Temp"].value
+        exhaust = self.Datapoints[GROUP_SENSORS]["Exhaust Temp"].value
 
         try:
             efficiency = ((sup - fresh) / (extract - fresh)) * 100
+            efficiency = max(0, min(100, efficiency))
             self.Datapoints[GROUP_UI]["Efficiency"].value = round(efficiency, 1)
         except ZeroDivisionError:
             self.Datapoints[GROUP_UI]["Efficiency"].value = 0
+        try:
+            efficiency = ((extract - exhaust) / (extract - fresh)) * 100
+            efficiency = max(0, min(100, efficiency))
+            self.Datapoints[GROUP_UI]["Efficiency Extract"].value = round(efficiency, 1)
+        except ZeroDivisionError:
+            self.Datapoints[GROUP_UI]["Efficiency Extract"].value = 0
 
         # Set alarms as attributes on Alarm-datapoint. This is done so that we don't
         # need to present all values in the UI
