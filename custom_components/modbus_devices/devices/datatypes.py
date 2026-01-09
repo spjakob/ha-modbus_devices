@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Literal
 
+_LOGGER = logging.getLogger(__name__)
+
 ###########################################
 ###### DATA TYPES FOR HOME ASSISTANT ######
 ###########################################
@@ -109,8 +111,6 @@ class ModbusDatapoint:
     entity_data: EntityData | None = None               # Entity parameters
     type: Literal['int', 'float', 'string'] = 'int'     # Type of the datapoint
     word_order: Literal['normal', 'swap'] = 'normal'   # Word order for multi-register values
-
-_LOGGER = logging.getLogger(__name__)
 
     def from_raw(self, registers: list[int]):
         # If we receive fewer registers than expected, log and pad with zeros
