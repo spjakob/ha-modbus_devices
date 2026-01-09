@@ -22,8 +22,7 @@ def scan_drivers(base_path):
             if file.endswith(".py") and file != "__init__.py":
                 # Create the module path relative to the "devices/" folder
                 relative_path = os.path.relpath(os.path.join(root, file), base_path)
-                module_base = os.path.splitext(relative_path)[0]
-                driver_path = module_base.replace(os.sep, ".")
+                driver_path = relative_path.replace(os.sep, ".").rstrip(".py")
                 drivers.append(driver_path)
     return drivers
 
@@ -36,17 +35,23 @@ async def load_device_class(driver_name):
 
     try:
         # Dynamically import the module
+        #driver_module = importlib.import_module(module_path, package=base_package)
         driver_module = await asyncio.to_thread(import_module, module_path, base_package)
 
-        # Load the class named 'Device' in the module
+        # Load tye class named 'Device' in the module
         device_class = getattr(driver_module, 'Device')
+        
         return device_class
+        
     except AttributeError as e:
-        _LOGGER.debug("AttributeError: %s - Class 'Device' not found in %s", e, module_path)
+        # If the 'Device' class is not found in the module, print the error
+        _LOGGER.debug(f"AttributeError: {e} - Class 'Device' not found in {module_path}")
         return None
     except ModuleNotFoundError as e:
-        _LOGGER.debug("ModuleNotFoundError: %s - Module %s not found.", e, module_path)
+        # Handle the case where the module itself can't be found
+        _LOGGER.debug(f"ModuleNotFoundError: {e} - Module {module_path} not found.")
         return None
     except Exception as e:
-        _LOGGER.debug("Error: %s while loading module %s", e, module_path)
+        # Handle any other exceptions that may arise
+        _LOGGER.debug(f"Error: {e} while loading module {module_path}")
         return None
