@@ -130,7 +130,7 @@ class ModbusDatapoint:
             raw_value = self._to_signed(combined_value, bits=16 * self.length)
 
             # Apply scaling and offset
-            self.value = raw_value * self.scaling + self.offset
+            self.value = int(raw_value * self.scaling + self.offset)
 
         elif self.type == 'float':
             # Convert registers to IEEE 754 float (big-endian)
