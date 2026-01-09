@@ -1,5 +1,6 @@
 import struct
 import uuid
+import logging
 
 from collections import namedtuple
 from dataclasses import dataclass, field
@@ -73,14 +74,14 @@ class ModbusGroup:
         return self._unique_id  # Return the auto-generated unique ID
 
     def __eq__(self, other):
-        # Ensure equality is based on mode and poll_mode
+        # Equality is instance-identity: groups are unique per instantiation
         if isinstance(other, ModbusGroup):
-            return (self.mode == other.mode) and (self.poll_mode == other.poll_mode)
+            return self.unique_id == other.unique_id
         return False
 
     def __hash__(self):
-        # Hash based on mode, poll_mode, and unique_id to ensure uniqueness in dict
-        return hash((self.mode, self.poll_mode, self.unique_id))
+        # Hash based on unique_id to be consistent with __eq__
+        return hash(self.unique_id)
     
 class ModbusDefaultGroups(Enum):
     CONFIG = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_OFF)
@@ -107,17 +108,26 @@ class ModbusDatapoint:
     value: int | float | str = 0                        # Scaled value, usually "read only"
     entity_data: EntityData | None = None               # Entity parameters
     type: Literal['int', 'float', 'string'] = 'int'     # Type of the datapoint
+    word_order: Literal['normal', 'swap'] = 'normal'   # Word order for multi-register values
+
+_LOGGER = logging.getLogger(__name__)
 
     def from_raw(self, registers: list[int]):
+        # If we receive fewer registers than expected, log and pad with zeros
         if len(registers) != self.length:
-            return
+            _LOGGER.debug("Partial read for datapoint at %s: expected %s registers, got %s", self.address, self.length, len(registers))
+            if len(registers) < self.length:
+                registers = registers + [0] * (self.length - len(registers))
+            else:
+                # Truncate if too many
+                registers = registers[: self.length]
 
         if self.type == 'int':
             combined_value = 0
             for reg in registers:
-                combined_value = (combined_value << 16) | reg
+                combined_value = (combined_value << 16) | (reg & 0xFFFF)
 
-            raw_value = self.twos_complement(combined_value, bits=16*self.length)
+            raw_value = self._to_signed(combined_value, bits=16 * self.length)
 
             # Apply scaling and offset
             self.value = raw_value * self.scaling + self.offset
@@ -150,8 +160,10 @@ class ModbusDatapoint:
         if self.type == 'int':
             # Reverse scaling and offset
             scaled_value = int(round((value - self.offset) / self.scaling))
+            bits = 16 * self.length
             if scaled_value < 0:
-                scaled_value = self.twos_complement(scaled_value, bits=16*self.length)
+                # Convert signed negative to unsigned representation for Modbus
+                scaled_value = self._to_unsigned(scaled_value, bits=bits)
 
         elif self.type == 'float':
             # Reverse scaling and offset
@@ -185,9 +197,15 @@ class ModbusDatapoint:
         return registers
 
     def twos_complement(self, number: int, bits: int = 16) -> int:
-        """Convert unsigned integer to signed integer using two's complement."""
-        if number < 0:
-            return number
-        if number >= (1 << (bits - 1)):
-            number -= (1 << bits)
-        return number
+        """Legacy compatibility: convert unsigned to signed."""
+        return self._to_signed(number, bits)
+
+    def _to_signed(self, value: int, bits: int) -> int:
+        mask = (1 << bits) - 1
+        value &= mask
+        sign_bit = 1 << (bits - 1)
+        return value - (1 << bits) if (value & sign_bit) else value
+
+    def _to_unsigned(self, value: int, bits: int) -> int:
+        mask = (1 << bits) - 1
+        return value & mask

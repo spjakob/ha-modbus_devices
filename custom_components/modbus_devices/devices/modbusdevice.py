@@ -101,6 +101,10 @@ class ModbusDevice():
     async def readGroup(self, group: ModbusGroup):
         """Read Modbus group registers and update data points."""
         MAX_REGISTERS_PER_READ = 125
+        # Ensure group exists and has datapoints
+        if group not in self.Datapoints or not self.Datapoints[group]:
+            _LOGGER.debug("No datapoints for group %s", group)
+            return
 
         addresses = [
             (dp.address, dp.length)
@@ -123,7 +127,11 @@ class ModbusDevice():
         if response.isError():
             raise ModbusException(f"Error reading group {group}: {response}")
 
-        _LOGGER.debug("Read data from address: %s - %s", start_addr, response.registers)
+        # If response.registers is shorter than requested, log a warning
+        if not hasattr(response, 'registers') or len(response.registers) < n_reg:
+            _LOGGER.warning("Partial or missing registers from device %s: requested %s, got %s", self._slave_id, n_reg, getattr(response, 'registers', None))
+
+        _LOGGER.debug("Read data from address: %s - %s", start_addr, getattr(response, 'registers', None))
 
         # Process the registers and update data points
         for name, dp in self.Datapoints[group].items():
