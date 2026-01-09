@@ -1,0 +1,7 @@
+# Python bytecode
+*.pyc
+__pycache__/
+
+custom_components/modbus_devices/devices/Grundfos/__pycache__
+custom_components/modbus_devices/devices/Eastron/__pycache__/SDM630.cpython-313.pyc
+custom_components/modbus_devices/devices/Eastron/__pycache__/SDM630.cpython-313.pyc
