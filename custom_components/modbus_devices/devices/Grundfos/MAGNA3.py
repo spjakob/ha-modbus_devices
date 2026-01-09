@@ -58,7 +58,7 @@ class Device(ModbusDevice):
             "Pump Liquid Temperature": ModbusDatapoint(
                 address=321,
                 scaling=0.01,
-#                offset=-273.15,  # Kelvin to Celsius conversion
+                offset=-273.15,
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.TEMPERATURE,
                     stateClass=SensorStateClass.MEASUREMENT,
@@ -68,7 +68,7 @@ class Device(ModbusDevice):
             "Remote Temperature 2": ModbusDatapoint(
                 address=336,
                 scaling=0.01,
-#                offset=-273.15,  # Kelvin to Celsius conversion
+                offset=-273.15,
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.TEMPERATURE,
                     stateClass=SensorStateClass.MEASUREMENT,
