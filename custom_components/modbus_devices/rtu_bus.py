@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import serial
+from typing import Any, Callable
 
 from pymodbus.client import AsyncModbusSerialClient
-from pymodbus.exceptions import ModbusException
-from pymodbus.pdu import ExceptionResponse
-from typing import Any, Callable
 
 _LOGGER = logging.getLogger(__name__)
 
