@@ -130,7 +130,13 @@ class ModbusDatapoint:
             raw_value = self._to_signed(combined_value, bits=16 * self.length)
 
             # Apply scaling and offset
-            self.value = int(raw_value * self.scaling + self.offset)
+            calculated_value = raw_value * self.scaling + self.offset
+            
+            # Check for potential data loss if an integer type would have a fractional part
+            if self.type == 'int' and calculated_value != int(calculated_value):
+                _LOGGER.warning("Datapoint at address %s (type 'int') calculated to %.4f, which has a fractional part. Value will be truncated to %d. Check scaling/offset configuration.", self.address, calculated_value, int(calculated_value))
+            
+            self.value = int(calculated_value)
 
         elif self.type == 'float':
             # Convert registers to IEEE 754 float (big-endian)
