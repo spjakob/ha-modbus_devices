@@ -1,10 +1,10 @@
 import struct
 import uuid
 
-from collections import namedtuple
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Literal
+from .const import ByteOrder, WordOrder
 
 ###########################################
 ###### DATA TYPES FOR HOME ASSISTANT ######
@@ -50,10 +50,11 @@ class EntityDataButton(EntityData):
 ###### DATA TYPES FOR MODBUS FUNCTIONALITY ######
 ################################################
 class ModbusMode(Enum):
-    NONE = 0        # Used for virtual data points
-    COILS = 1
-    INPUT = 3
-    HOLDING = 4
+    NONE = 0                # Used for virtual data points
+    COILS = 1               # Function codes 1/5/15
+    DISCRETE_INPUTS = 2     # Function codes 2
+    HOLDING = 3             # Function codes 3/6/16
+    INPUT = 4               # Function codes 4
 
 class ModbusPollMode(Enum):
     POLL_OFF = 0      # Values will not be read automatically
@@ -100,45 +101,46 @@ class ModbusDefaultGroups(Enum):
 
 @dataclass
 class ModbusDatapoint:
-    address: int = 0                                   # 0-indexed address
-    length: int = 1                                     # Number of registers
-    scaling: float = 1                                  # Multiplier for raw value  
-    offset: float = 0.0                                 # Offset     
-    value: int | float | str = 0                        # Scaled value, usually "read only"
-    entity_data: EntityData | None = None               # Entity parameters
-    type: Literal['int', 'float', 'string'] = 'int'     # Type of the datapoint
+    address: int = 0                                            # 0-indexed address
+    length: int = 1                                             # Number of registers
+    scaling: float = 1                                          # Multiplier for raw value  
+    offset: float = 0.0                                         # Offset     
+    value: int | float | str = 0                                # Scaled value, usually "read only"
+    entity_data: EntityData | None = None                       # Entity parameters
+    type: Literal['int', 'uint', 'float', 'string'] = 'int'     # Type of the datapoint
 
-    def from_raw(self, registers: list[int]):
+    def from_raw(self, registers: list[int], byte_order=ByteOrder.MSB, word_order=WordOrder.NORMAL):
         if len(registers) != self.length:
-            return
+            raise ValueError(f"Datapoint at address {self.address}: expected {self.length} registers, got {len(registers)}")
 
-        if self.type == 'int':
-            combined_value = 0
-            for reg in registers:
-                combined_value = (combined_value << 16) | reg
+        # Convert registers to bytes with correct per-register byte order
+        b = bytearray()
+        for reg in registers:
+            if byte_order == ByteOrder.MSB:
+                b += reg.to_bytes(2, byteorder='big')
+            else:  # LSB
+                b += reg.to_bytes(2, byteorder='little')
 
-            raw_value = self.twos_complement(combined_value, bits=16*self.length)
+        # Apply word swap if needed
+        if word_order == WordOrder.SWAP and len(registers) > 1:
+            words = [b[i:i+2] for i in range(0, len(b), 2)]
+            words = words[::-1]
+            b = b''.join(words)
 
-            # Apply scaling and offset
-            self.value = raw_value * self.scaling + self.offset
+        # Interpret bytes
+        if self.type in ('int', 'uint'):
+            combined_value = int.from_bytes(b, byteorder='big', signed=(self.type == 'int'))
+            self.value = combined_value * self.scaling + self.offset
 
         elif self.type == 'float':
-            # Convert registers to IEEE 754 float (big-endian)
-            byte_array = bytearray()
-            for reg in registers:
-                byte_array += reg.to_bytes(2, byteorder='big')
-            
             if self.length == 2:
-                raw_value = struct.unpack('>f', byte_array)[0]  # 32-bit float
+                self.value = struct.unpack('>f', b)[0] * self.scaling + self.offset
             elif self.length == 4:
-                raw_value = struct.unpack('>d', byte_array)[0]  # 64-bit double
+                self.value = struct.unpack('>d', b)[0] * self.scaling + self.offset
             else:
                 # Fallback: treat as integer
-                combined_value = int.from_bytes(byte_array, byteorder='big')
-                raw_value = combined_value
-            
-            # Apply scaling and offset
-            self.value = raw_value * self.scaling + self.offset
+                combined_value = int.from_bytes(b, byteorder='big')
+                self.value = combined_value * self.scaling + self.offset
 
         elif self.type == 'string':
             try:
@@ -146,48 +148,38 @@ class ModbusDatapoint:
             except ValueError:
                 self.value = ''
 
-    def to_raw(self, value) -> list[int]:
-        if self.type == 'int':
-            # Reverse scaling and offset
+    def to_raw(self, value, byte_order=ByteOrder.MSB, word_order=WordOrder.NORMAL) -> list[int]:
+        # Reverse scaling and offset
+        if self.type in ('int', 'uint'):
             scaled_value = int(round((value - self.offset) / self.scaling))
-            if scaled_value < 0:
-                scaled_value = self.twos_complement(scaled_value, bits=16*self.length)
+            b = scaled_value.to_bytes(self.length*2, byteorder='big', signed=(self.type == 'int'))
 
         elif self.type == 'float':
-            # Reverse scaling and offset
             scaled_value = (value - self.offset) / self.scaling
             if self.length == 2:
-                bytes_value = struct.pack('>f', scaled_value)  # 32-bit float
+                b = struct.pack('>f', scaled_value)
             elif self.length == 4:
-                bytes_value = struct.pack('>d', scaled_value)  # 64-bit double
+                b = struct.pack('>d', scaled_value)
             else:
-                # Fallback: convert to integer
                 scaled_value = int(round(scaled_value))
-                bytes_value = scaled_value.to_bytes(self.length*2, byteorder='big', signed=False)
-
-            # Convert bytes to registers
-            registers = []
-            for i in range(0, len(bytes_value), 2):
-                registers.append(int.from_bytes(bytes_value[i:i+2], byteorder='big'))
-            return registers
+                b = scaled_value.to_bytes(self.length*2, byteorder='big')
 
         elif self.type == 'string':
-            regs = [ord(c) for c in value]
-            while len(regs) < self.length:
-                regs.append(0)
-            return regs[:self.length]
+            b = bytes(value.ljust(self.length*2, '\x00'), 'utf-8')
 
-        # Default integer conversion to registers
+        # Apply word swap if needed
+        if word_order == WordOrder.SWAP and self.length > 1 and self.type != 'string':
+            words = [b[i:i+2] for i in range(0, len(b), 2)]
+            words = words[::-1]
+            b = b''.join(words)
+
+        # Convert to registers with per-register byte order
         registers = []
-        for _ in range(self.length):
-            registers.insert(0, scaled_value & 0xFFFF)
-            scaled_value >>= 16
-        return registers
+        for i in range(0, len(b), 2):
+            reg_bytes = b[i:i+2]
+            if byte_order == ByteOrder.MSB:
+                registers.append(int.from_bytes(reg_bytes, byteorder='big'))
+            else:
+                registers.append(int.from_bytes(reg_bytes, byteorder='little'))
 
-    def twos_complement(self, number: int, bits: int = 16) -> int:
-        """Convert unsigned integer to signed integer using two's complement."""
-        if number < 0:
-            return number
-        if number >= (1 << (bits - 1)):
-            number -= (1 << bits)
-        return number
+        return registers

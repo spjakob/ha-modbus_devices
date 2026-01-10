@@ -38,7 +38,7 @@ async def load_device_class(driver_name):
         #driver_module = importlib.import_module(module_path, package=base_package)
         driver_module = await asyncio.to_thread(import_module, module_path, base_package)
 
-        # Load tye class named 'Device' in the module
+        # Load the class named 'Device' in the module
         device_class = getattr(driver_module, 'Device')
         
         return device_class

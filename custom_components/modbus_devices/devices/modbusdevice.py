@@ -1,12 +1,13 @@
 import logging
 
+from enum import Enum
 from homeassistant.helpers.entity import EntityCategory
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
 from .connection import ConnectionParams, TCPConnectionParams, RTUConnectionParams
-
+from .const import ByteOrder, WordOrder
 from .datatypes import ModbusMode, ModbusPollMode, ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
 from .datatypes import EntityDataSelect, EntityDataNumber
 from ..rtu_bus import RTUBusManager, RTUBusClient
@@ -19,6 +20,10 @@ class ModbusDevice():
     model = None
     sw_version = None
     serial_number = None
+
+    # Settings
+    byte_order = ByteOrder.MSB
+    word_order = WordOrder.NORMAL
 
     def __init__(self, connection_params: ConnectionParams, rtu_bus: RTUBusManager):
         if isinstance(connection_params, TCPConnectionParams):
@@ -129,7 +134,7 @@ class ModbusDevice():
         for name, dp in self.Datapoints[group].items():
             offset = dp.address - start_addr
             registers = response.registers[offset:offset + dp.length]
-            dp.from_raw(registers)
+            dp.from_raw(registers, self.byte_order, self.word_order)
 
     """ ******************************************************* """
     """ **************** READ SINGLE VALUE ******************** """
@@ -153,7 +158,7 @@ class ModbusDevice():
         _LOGGER.debug("Read data: %s", response.registers)
 
         registers = response.registers[:length]
-        datapoint.from_raw(registers)
+        datapoint.from_raw(registers, self.byte_order, self.word_order)
 
         return datapoint.value
 
@@ -172,7 +177,7 @@ class ModbusDevice():
             raise ValueError(f"Unsupported register length: {length}. Only 1 or 2 registers are supported.")
 
         # Get value as modbus registers
-        registers = datapoint.to_raw(value)
+        registers = datapoint.to_raw(value, self.byte_order, self.word_order)
 
         # Write the registers
         address = datapoint.address
@@ -180,8 +185,10 @@ class ModbusDevice():
 
         if group.mode == ModbusMode.COILS:
             method = self._client.write_coil if length == 1 else self._client.write_coils
-        else:
+        elif group.mode == ModbusMode.HOLDING:
             method = self._client.write_register if length == 1 else self._client.write_registers
+        else:
+            raise ModbusException(f"Write Value: Unsupported Modbus mode {group.mode!r} for group {group!r}")
 
         response = await method(
             address=address,
@@ -201,9 +208,10 @@ class ModbusDevice():
     """ ******************************************************* """
     def _get_read_method(self, mode: ModbusMode):
         dispatch = {
-            ModbusMode.INPUT:   self._client.read_input_registers,
-            ModbusMode.HOLDING: self._client.read_holding_registers,
-            ModbusMode.COILS:   self._client.read_coils,
+            ModbusMode.INPUT:           self._client.read_input_registers,
+            ModbusMode.DISCRETE_INPUTS: self._client.read_discrete_inputs,
+            ModbusMode.HOLDING:         self._client.read_holding_registers,
+            ModbusMode.COILS:           self._client.read_coils,
         }
 
         try:
