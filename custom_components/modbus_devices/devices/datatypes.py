@@ -17,11 +17,13 @@ class EntityData:
     enabledDefault: bool = True         # Entity enabled by default
     icon: str = None                    # None | "mdi:thermometer"....
 
+
 @dataclass
 class EntityDataSensor(EntityData):
     stateClass: str = None              # None | Set to valid "SensorStateClass" to enable long term storage
     units: str = None                   # None | from homeassistant.const import UnitOf....
     enum: dict = field(default_factory=dict)
+
 
 @dataclass
 class EntityDataNumber(EntityData):
@@ -30,21 +32,26 @@ class EntityDataNumber(EntityData):
     max_value: int = 65535
     step: int = 1
 
+
 @dataclass
 class EntityDataSelect(EntityData):
     options: dict = field(default_factory=dict)
+
 
 @dataclass
 class EntityDataBinarySensor(EntityData):
     pass
 
+
 @dataclass
 class EntityDataSwitch(EntityData):
     pass
 
+
 @dataclass
 class EntityDataButton(EntityData):
     pass
+
 
 ################################################
 ###### DATA TYPES FOR MODBUS FUNCTIONALITY ######
@@ -56,10 +63,12 @@ class ModbusMode(Enum):
     HOLDING = 3             # Function codes 3/6/16
     INPUT = 4               # Function codes 4
 
+
 class ModbusPollMode(Enum):
     POLL_OFF = 0      # Values will not be read automatically
     POLL_ON = 1         # Values will be read each poll interval
     POLL_ONCE = 2       # Just read them once, for example for static configuration
+
 
 class ModbusGroup:
     def __init__(self, mode: ModbusMode, poll_mode: ModbusPollMode):
@@ -83,6 +92,7 @@ class ModbusGroup:
         # Hash based on mode, poll_mode, and unique_id to ensure uniqueness in dict
         return hash((self.mode, self.poll_mode, self.unique_id))
     
+
 class ModbusDefaultGroups(Enum):
     CONFIG = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_OFF)
     UI = ModbusGroup(ModbusMode.NONE, ModbusPollMode.POLL_OFF)
@@ -98,6 +108,7 @@ class ModbusDefaultGroups(Enum):
     @property
     def poll_mode(self):
         return self.value.poll_mode  # Access the poll_mode property directly
+
 
 @dataclass
 class ModbusDatapoint:
@@ -127,10 +138,29 @@ class ModbusDatapoint:
             words = words[::-1]
             b = b''.join(words)
 
-        # Interpret bytes
+        # Start by assigning raw_value based on type so signed/unsigned handling is explicit
         if self.type in ('int', 'uint'):
-            combined_value = int.from_bytes(b, byteorder='big', signed=(self.type == 'int'))
-            self.value = combined_value * self.scaling + self.offset
+            bits = self.length * 16
+            # Read the container as unsigned first (raw bytes as transmitted)
+            raw_uint = int.from_bytes(b, byteorder='big', signed=False)
+
+            # For signed datapoints, convert the unsigned container to a signed value
+            if self.type == 'int':
+                # Convert using two's complement arithmetic
+                sign_bit = 1 << (bits - 1)
+                mask = (1 << bits) - 1
+                raw_uint &= mask
+                raw_value = raw_uint - (1 << bits) if (raw_uint & sign_bit) else raw_uint
+            else:
+                raw_value = raw_uint
+
+            calculated_value = raw_value * self.scaling + self.offset
+
+            # If scaling or offset creates a decimal part, keep as float, otherwise convert to int
+            if calculated_value % 1 != 0:
+                self.value = calculated_value  # Keep as float
+            else:
+                self.value = int(calculated_value)  # Convert to int if no fractional part
 
         elif self.type == 'float':
             if self.length == 2:
@@ -138,8 +168,8 @@ class ModbusDatapoint:
             elif self.length == 4:
                 self.value = struct.unpack('>d', b)[0] * self.scaling + self.offset
             else:
-                # Fallback: treat as integer
-                combined_value = int.from_bytes(b, byteorder='big')
+                # Fallback: treat as unsigned integer container
+                combined_value = int.from_bytes(b, byteorder='big', signed=False)
                 self.value = combined_value * self.scaling + self.offset
 
         elif self.type == 'string':
@@ -153,7 +183,6 @@ class ModbusDatapoint:
         if self.type in ('int', 'uint'):
             scaled_value = int(round((value - self.offset) / self.scaling))
             b = scaled_value.to_bytes(self.length*2, byteorder='big', signed=(self.type == 'int'))
-
         elif self.type == 'float':
             scaled_value = (value - self.offset) / self.scaling
             if self.length == 2:
@@ -183,3 +212,14 @@ class ModbusDatapoint:
                 registers.append(int.from_bytes(reg_bytes, byteorder='little'))
 
         return registers
+
+    # Helper functions for two's complement conversion
+    def _to_signed(self, value: int, bits: int) -> int:
+        mask = (1 << bits) - 1
+        value &= mask
+        sign_bit = 1 << (bits - 1)
+        return value - (1 << bits) if (value & sign_bit) else value
+
+    def _to_unsigned(self, value: int, bits: int) -> int:
+        mask = (1 << bits) - 1
+        return value & mask
