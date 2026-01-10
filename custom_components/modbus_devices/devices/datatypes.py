@@ -138,29 +138,15 @@ class ModbusDatapoint:
             words = words[::-1]
             b = b''.join(words)
 
-        # Start by assigning raw_value based on type so signed/unsigned handling is explicit
+        # Interpret bytes
         if self.type in ('int', 'uint'):
-            bits = self.length * 16
-            # Read the container as unsigned first (raw bytes as transmitted)
-            raw_uint = int.from_bytes(b, byteorder='big', signed=False)
-
-            # For signed datapoints, convert the unsigned container to a signed value
-            if self.type == 'int':
-                # Convert using two's complement arithmetic
-                sign_bit = 1 << (bits - 1)
-                mask = (1 << bits) - 1
-                raw_uint &= mask
-                raw_value = raw_uint - (1 << bits) if (raw_uint & sign_bit) else raw_uint
-            else:
-                raw_value = raw_uint
-
-            calculated_value = raw_value * self.scaling + self.offset
-
+            combined_value = int.from_bytes(b, byteorder='big', signed=(self.type == 'int'))
+            calculated_value = combined_value * self.scaling + self.offset
             # If scaling or offset creates a decimal part, keep as float, otherwise convert to int
             if calculated_value % 1 != 0:
-                self.value = calculated_value  # Keep as float
+                self.value = calculated_value
             else:
-                self.value = int(calculated_value)  # Convert to int if no fractional part
+                self.value = int(calculated_value)
 
         elif self.type == 'float':
             if self.length == 2:
@@ -213,13 +199,4 @@ class ModbusDatapoint:
 
         return registers
 
-    # Helper functions for two's complement conversion
-    def _to_signed(self, value: int, bits: int) -> int:
-        mask = (1 << bits) - 1
-        value &= mask
-        sign_bit = 1 << (bits - 1)
-        return value - (1 << bits) if (value & sign_bit) else value
-
-    def _to_unsigned(self, value: int, bits: int) -> int:
-        mask = (1 << bits) - 1
-        return value & mask
+    # (No helper functions required — keep decoding minimal and use int.from_bytes signed flag)
