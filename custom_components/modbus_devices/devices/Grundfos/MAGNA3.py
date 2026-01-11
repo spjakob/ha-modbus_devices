@@ -11,8 +11,12 @@ from homeassistant.const import (
     UnitOfFrequency,
     UnitOfTemperature,
     UnitOfEnergy,
-    UnitOfPower
+    UnitOfPower,
+    UnitOfElectricCurrent,
+    UnitOfTime,
+    UnitOfVolume
 )
+from homeassistant.const import PERCENTAGE, REVOLUTIONS_PER_MINUTE
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,12 +51,79 @@ class Device(ModbusDevice):
                 )
             ),
             "Frequency": ModbusDatapoint(
-                address=304,
+                address=305,
                 scaling=0.1,
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.FREQUENCY,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfFrequency.HERTZ
+                )
+            ),
+            "Relative Performance": ModbusDatapoint(
+                address=302,
+                scaling=0.01,
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    icon="mdi:gauge"
+                )
+            ),
+            "Motor Speed": ModbusDatapoint(
+                address=303,
+                scaling=1,
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=REVOLUTIONS_PER_MINUTE,
+                    icon="mdi:fan"
+                )
+            ),
+            "Actual Setpoint": ModbusDatapoint(
+                address=307,
+                scaling=0.01,
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    icon="mdi:target"
+                )
+            ),
+            "Motor Current": ModbusDatapoint(
+                address=308,
+                scaling=0.1,
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.CURRENT,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfElectricCurrent.AMPERE
+                )
+            ),
+            "Total Power (Electrical)": ModbusDatapoint(
+                address=311,
+                length=2,
+                type='uint',
+                scaling=1,
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.POWER,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfPower.WATT
+                )
+            ),
+            "Power Electronics Temp": ModbusDatapoint(
+                address=316,
+                scaling=0.01,
+                offset=-273.15,
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.TEMPERATURE,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfTemperature.CELSIUS
+                )
+            ),
+            "Electronics Temp": ModbusDatapoint(
+                address=320,
+                scaling=0.01,
+                offset=-273.15,
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.TEMPERATURE,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfTemperature.CELSIUS
                 )
             ),
             "Pump Liquid Temperature": ModbusDatapoint(
@@ -76,7 +147,7 @@ class Device(ModbusDevice):
                 )
             ),
             "Differential Pressure": ModbusDatapoint(
-                address=338,
+                address=339,
                 scaling=0.001,
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.PRESSURE,
@@ -84,8 +155,90 @@ class Device(ModbusDevice):
                     units=UnitOfPressure.BAR
                 )
             ),
+            "Specific Energy Consumption": ModbusDatapoint(
+                address=325,
+                scaling=1,
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units="Wh/m³",
+                    icon="mdi:lightning-bolt"
+                )
+            ),
+            "Operating Time": ModbusDatapoint(
+                address=326,
+                length=2,
+                type='uint',
+                scaling=1,
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.DURATION,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfTime.HOURS
+                )
+            ),
+            "Total Energy (Electrical)": ModbusDatapoint(
+                address=331,
+                length=2,
+                type='uint',
+                scaling=1,
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR
+                )
+            ),
+            "Number of Starts": ModbusDatapoint(
+                address=333,
+                length=2,
+                type='uint',
+                scaling=1,
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units="starts",
+                    icon="mdi:counter"
+                )
+            ),
+            "User Setpoint": ModbusDatapoint(
+                address=337,
+                scaling=0.01,
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    icon="mdi:target"
+                )
+            ),
+            "Max Flow Limit": ModbusDatapoint(
+                address=344,
+                scaling=0.1,
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.VOLUME_FLOW_RATE,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR
+                )
+            ),
+            "Volume 1": ModbusDatapoint(
+                address=356,
+                length=2,
+                type='uint',
+                scaling=0.01,
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.WATER,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfVolume.CUBIC_METERS
+                )
+            ),
+            "Volume 2": ModbusDatapoint(
+                address=360,
+                length=2,
+                type='uint',
+                scaling=0.01,
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.WATER,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfVolume.CUBIC_METERS
+                )
+            ),
             "Heat Energy": ModbusDatapoint(
-                address=352,
+                address=351,
                 length=2,
                 type='uint',
                 entity_data=EntityDataSensor(
@@ -95,7 +248,7 @@ class Device(ModbusDevice):
                 )
             ),
             "Heat Differential Temp": ModbusDatapoint(
-                address=354,
+                address=355,
                 scaling=0.01,
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.TEMPERATURE,
@@ -104,7 +257,7 @@ class Device(ModbusDevice):
                 )
             ),
             "Heat Power": ModbusDatapoint(
-                address=355,
+                address=353,
                 length=2,
                 type='uint',
                 scaling=0.001,
