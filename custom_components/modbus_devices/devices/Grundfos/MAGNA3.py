@@ -60,6 +60,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLUME_FLOW_RATE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
+                    precision=1,
                 ),
             ),
             "Relative Performance": ModbusDatapoint(

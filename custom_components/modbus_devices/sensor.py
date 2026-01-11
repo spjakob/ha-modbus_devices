@@ -36,6 +36,7 @@ class ModbusSensorEntity(ModbusBaseEntity, SensorEntity):
         self._attr_device_class = modbusDataPoint.entity_data.deviceClass
         self._attr_state_class = modbusDataPoint.entity_data.stateClass
         self._attr_native_unit_of_measurement = modbusDataPoint.entity_data.units
+        self._attr_suggested_display_precision = modbusDataPoint.entity_data.precision
 
         """Cusom Entity properties"""
         self.enum = modbusDataPoint.entity_data.enum

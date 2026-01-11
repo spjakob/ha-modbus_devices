@@ -22,6 +22,7 @@ class EntityDataSensor(EntityData):
     stateClass: str = None              # None | Set to valid "SensorStateClass" to enable long term storage
     units: str = None                   # None | from homeassistant.const import UnitOf....
     enum: dict = field(default_factory=dict)
+    precision: int | None = None        # None | Suggested display precision
 
 @dataclass
 class EntityDataNumber(EntityData):
@@ -114,8 +115,12 @@ class ModbusDatapoint:
         if self.type in (ModbusDataType.INT , ModbusDataType.UINT ):
             combined_value = int.from_bytes(b, byteorder='big', signed=(self.type == ModbusDataType.INT))
             calculated_value = combined_value * self.scaling + self.offset
-            # Preserve float only when scaling/offset create a fractional part
-            if calculated_value % 1 != 0:
+            
+            # Use specific precision if defined, otherwise use legacy integer-cleanup logic
+            precision = getattr(self.entity_data, 'precision', None)
+            if precision is not None:
+                self.value = float(round(calculated_value, precision))
+            elif calculated_value % 1 != 0:
                 self.value = calculated_value
             else:
                 self.value = int(calculated_value)
