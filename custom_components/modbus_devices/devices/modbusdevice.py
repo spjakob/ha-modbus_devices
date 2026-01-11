@@ -7,8 +7,8 @@ from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
 from .connection import ConnectionParams, TCPConnectionParams, RTUConnectionParams
-from .const import ByteOrder, WordOrder
-from .datatypes import ModbusMode, ModbusPollMode, ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
+from .const import ByteOrder, WordOrder, ModbusMode, ModbusPollMode
+from .datatypes import ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
 from .datatypes import EntityDataSelect, EntityDataNumber
 from ..rtu_bus import RTUBusManager, RTUBusClient
 
@@ -131,10 +131,16 @@ class ModbusDevice():
         _LOGGER.debug("Read data from address: %s - %s", start_addr, response.registers)
 
         # Process the registers and update data points
+
         for name, dp in self.Datapoints[group].items():
             offset = dp.address - start_addr
             registers = response.registers[offset:offset + dp.length]
-            dp.from_raw(registers, self.byte_order, self.word_order)
+
+            try:
+                dp.from_raw(registers, self.byte_order, self.word_order)
+            except Exception as exc:
+                _LOGGER.warning("Failed to decode datapoint %s in group %s (addr=%s len=%s raw=%s)", name, group, dp.address, dp.length, registers, exc_info=exc)
+                raise
 
     """ ******************************************************* """
     """ **************** READ SINGLE VALUE ******************** """
@@ -145,11 +151,11 @@ class ModbusDevice():
         if key not in self.Datapoints[group]:
             raise KeyError(f"Key '{key}' not found in group '{group}'")
 
-        datapoint = self.Datapoints[group][key]
-        length = datapoint.length
+        dp = self.Datapoints[group][key]
+        length = dp.length
 
         method = self._get_read_method(group.mode) 
-        response = await method(address=datapoint.address, count=length, device_id=self._slave_id)
+        response = await method(address=dp.address, count=length, device_id=self._slave_id)
 
         # Handle Modbus errors
         if response.isError():
@@ -158,9 +164,13 @@ class ModbusDevice():
         _LOGGER.debug("Read data: %s", response.registers)
 
         registers = response.registers[:length]
-        datapoint.from_raw(registers, self.byte_order, self.word_order)
+        try:
+            dp.from_raw(registers, self.byte_order, self.word_order)
+        except Exception as exc:
+            _LOGGER.warning("Failed to decode datapoint %s in group %s (addr=%s len=%s raw=%s)", key, group, dp.address, dp.length, registers, exc_info=exc)
+            raise
 
-        return datapoint.value
+        return dp.value
 
     """ ******************************************************* """
     """ **************** WRITE SINGLE VALUE ******************* """

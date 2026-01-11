@@ -148,7 +148,12 @@ class ModbusCoordinator(DataUpdateCoordinator):
                 return self._modbusDevice.Datapoints[group][key].entity_data.attrs
         return None
 
-    async def write_value(self, group, key, value) -> bool:
+    async def write_value(self, group, key, value):
         _LOGGER.debug("Write_Data: %s - %s - %s", group, key, value)
-        await self._modbusDevice.writeValue(group, key, value)
+        try:
+            await self._modbusDevice.writeValue(group, key, value)
+        except Exception as exc:
+            _LOGGER.error("Failed to write value '%s' to key '%s' in group '%s': %s", value, key, group, exc, exc_info=exc)
+            raise
+
         self.setFastPollMode()
