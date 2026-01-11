@@ -6,7 +6,7 @@ from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups
 from ..datatypes import EntityDataSensor, EntityDataNumber, EntityDataSelect
 
 from homeassistant.const import UnitOfTemperature
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS_MILLIWATT
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.number import NumberDeviceClass
 
@@ -29,11 +29,12 @@ class Device(ModbusDevice):
     def loadDatapoints(self):
         # DEVICE_INFO - Read-only
         self.Datapoints[GROUP_DEVICE_INFO] = {
-            "Serial Number": ModbusDatapoint(address=0, length=4),     # 4 registers for a 64-bit value
-            "Software Version Major": ModbusDatapoint(address=4),
-            "Software Version Minor": ModbusDatapoint(address=5),
-            "Software Version Micro": ModbusDatapoint(address=6),
-            "Number Of Zones": ModbusDatapoint(address=50),
+            "Serial Number": ModbusDatapoint(address=0, length=4, type='uint'),     # 4 registers for a 64-bit value
+            "Software Version Major": ModbusDatapoint(address=4, type='uint'),
+            "Software Version Minor": ModbusDatapoint(address=5, type='uint'),
+            "Software Version Micro": ModbusDatapoint(address=6, type='uint'),
+            # Address 50 is used for both Input (Number of Zones) and Holding (Temp Alarm) registers. This is valid in Modbus.
+            "Number Of Zones": ModbusDatapoint(address=50, type='uint'),
         }
 
         # UNIT_STATUSES - Read
@@ -77,10 +78,7 @@ class Device(ModbusDevice):
 
     def onAfterFirstRead(self):
         # Update device info
-#       serial_registers = self.Datapoints[GROUP_DEVICE_INFO]["Serial Number"].value
-#       packed_bytes = struct.pack('>HHHH', *serial_registers)
-#       self.serial_number = struct.unpack('>Q', packed_bytes)[0]
-        self.serial_number=42
+        self.serial_number = self.Datapoints[GROUP_DEVICE_INFO]["Serial Number"].value
         number_of_zones = self.Datapoints[GROUP_DEVICE_INFO]["Number Of Zones"].value
 
         a = self.Datapoints[GROUP_DEVICE_INFO]["Software Version Major"].value
@@ -95,7 +93,7 @@ class Device(ModbusDevice):
         _LOGGER.info("%s zones detected and activating entities for these", number_of_zones)
         
         # Dynamically assign SENSOR datapoints to a separate group for each zone
-        for i in range(1, number_of_zones + 1):
+        for i in range(1, int(number_of_zones) + 1):
             # Create a new dynamic group
             self.dynamic_groups[f"GROUP_SENSORS_ZONE_{i}"] = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 
@@ -110,17 +108,20 @@ class Device(ModbusDevice):
                     entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.TEMPERATURE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfTemperature.CELSIUS)),
                 f"Zone {i} Actual Humidity": ModbusDatapoint(
                     address=base_register + 1,
+                    type='uint',
                     scaling=0.1,
                     entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.HUMIDITY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
                 f"Zone {i} Actual Battery": ModbusDatapoint(
                     address=base_register + 2,
+                    type='uint',
                     entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.BATTERY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
                 f"Zone {i} Actual Signal Strength": ModbusDatapoint(
-                    address=base_register + 3),
-                f"Zone {i} Thermostat Address": ModbusDatapoint(
-                    address=base_register + 4, length=3),
+                    address=base_register + 3,
+                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.SIGNAL_STRENGTH, stateClass=SensorStateClass.MEASUREMENT, units=SIGNAL_STRENGTH_DECIBELS_MILLIWATT)),
+                f"Zone {i} Thermostat Address Raw": ModbusDatapoint(
+                    address=base_register + 4, length=3, type='uint'),
                 f"Zone {i} Connected Actuators": ModbusDatapoint(
-                    address=base_register + 6)
+                    address=base_register + 7, type='uint') # Corrected from +6 to +7
             }
         
         # Dynamically assign SETPOINT datapoints to a separate group for each zone
@@ -141,3 +142,39 @@ class Device(ModbusDevice):
                     address=base_register + 2, 
                     entity_data=EntityDataNumber(min_value=0, max_value=255))
             }
+
+        # Add UI datapoints that are calculated
+        for i in range(1, int(number_of_zones) + 1):
+            self.Datapoints.setdefault(GROUP_UNIT_STATUSES, {})[f"Zone {i} Thermostat Address"] = ModbusDatapoint(entity_data=EntityDataSensor(icon="mdi:network-outline"))
+            self.Datapoints.setdefault(GROUP_UNIT_STATUSES, {})[f"Zone {i} Connected Actuators List"] = ModbusDatapoint(entity_data=EntityDataSensor(icon="mdi:valve"))
+
+    def onAfterRead(self):
+        number_of_zones = self.Datapoints[GROUP_DEVICE_INFO]["Number Of Zones"].value
+        for i in range(1, int(number_of_zones) + 1):
+            # Format the thermostat MAC address
+            try:
+                raw_mac_int = self.Datapoints[self.dynamic_groups[f"GROUP_SENSORS_ZONE_{i}"]][f"Zone {i} Thermostat Address Raw"].value
+                if isinstance(raw_mac_int, int) and raw_mac_int > 0:
+                    # Convert 48-bit integer to a byte string
+                    mac_bytes = raw_mac_int.to_bytes(6, 'big')
+                    # Format as a standard MAC address
+                    formatted_mac = ":".join(f"{b:02X}" for b in mac_bytes)
+                    self.Datapoints[GROUP_UNIT_STATUSES][f"Zone {i} Thermostat Address"].value = formatted_mac
+                else:
+                    self.Datapoints[GROUP_UNIT_STATUSES][f"Zone {i} Thermostat Address"].value = "N/A"
+            except (KeyError, AttributeError, TypeError):
+                 self.Datapoints[GROUP_UNIT_STATUSES][f"Zone {i} Thermostat Address"].value = "Error"
+
+            # Parse the connected actuators bitfield
+            try:
+                bitfield = self.Datapoints[self.dynamic_groups[f"GROUP_SENSORS_ZONE_{i}"]][f"Zone {i} Connected Actuators"].value
+                if isinstance(bitfield, int):
+                    connected = []
+                    for j in range(12):
+                        if (bitfield >> j) & 1:
+                            connected.append(str(j + 1))
+                    self.Datapoints[GROUP_UNIT_STATUSES][f"Zone {i} Connected Actuators List"].value = ", ".join(connected) if connected else "None"
+                else:
+                    self.Datapoints[GROUP_UNIT_STATUSES][f"Zone {i} Connected Actuators List"].value = "N/A"
+            except (KeyError, AttributeError, TypeError):
+                self.Datapoints[GROUP_UNIT_STATUSES][f"Zone {i} Connected Actuators List"].value = "Error"
