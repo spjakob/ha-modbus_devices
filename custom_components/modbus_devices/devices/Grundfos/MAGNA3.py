@@ -86,7 +86,8 @@ class Device(ModbusDevice):
             ),
             "Heat Energy": ModbusDatapoint(
                 address=352,
-                # Scaling defaults to 1 if not provided
+                length=2,
+                type='uint',
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
@@ -104,6 +105,8 @@ class Device(ModbusDevice):
             ),
             "Heat Power": ModbusDatapoint(
                 address=355,
+                length=2,
+                type='uint',
                 scaling=0.001,
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER,  # Fixed: kW is Power, not Energy
