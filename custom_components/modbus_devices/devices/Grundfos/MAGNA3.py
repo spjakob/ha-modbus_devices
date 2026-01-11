@@ -11,8 +11,6 @@ from ..datatypes import (
     EntityDataSelect,
 )
 from ..const import ModbusMode, ModbusPollMode
-from ..datatypes import ModbusDatapoint, ModbusGroup
-from ..datatypes import EntityDataSensor
 
 from homeassistant.const import (
     UnitOfPressure,
