@@ -5,7 +5,8 @@
 import logging
 
 from ..modbusdevice import ModbusDevice
-from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups, ModbusMode, ModbusPollMode
+from ..const import ModbusMode, ModbusPollMode, ModbusDataType
+from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups
 from ..datatypes import EntityDataSensor, EntityDataSelect, EntityDataNumber, EntityDataBinarySensor, EntityDataSwitch, EntityDataButton
 
 from homeassistant.const import UnitOfTemperature, UnitOfTime
@@ -56,8 +57,8 @@ class Device(ModbusDevice):
             "FW Build": ModbusDatapoint(address=6002),
             "Par Maj": ModbusDatapoint(address=6003),
             "Par Min": ModbusDatapoint(address=6004),
-            "Model Name": ModbusDatapoint(address=6007, length=15, type='string'),        # 15 registers
-            "Serial Number": ModbusDatapoint(address=6023, length=24, type='string'),     # 24 registers
+            "Model Name": ModbusDatapoint(address=6007, length=15, type=ModbusDataType.STRING),        # 15 registers
+            "Serial Number": ModbusDatapoint(address=6023, length=24, type=ModbusDataType.STRING),     # 24 registers
         }
 
         # ALARMS - Read-only

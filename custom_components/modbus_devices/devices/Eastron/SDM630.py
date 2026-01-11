@@ -1,7 +1,8 @@
 import logging
 
 from ..modbusdevice import ModbusDevice
-from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusMode, ModbusPollMode
+from ..const import ModbusMode, ModbusPollMode
+from ..datatypes import ModbusDatapoint, ModbusGroup
 from ..datatypes import EntityDataSensor
 
 # Import correct unit constants

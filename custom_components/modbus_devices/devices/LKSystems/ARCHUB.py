@@ -1,7 +1,8 @@
 import logging
 
 from ..modbusdevice import ModbusDevice
-from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups, ModbusMode, ModbusPollMode
+from ..const import ModbusMode, ModbusPollMode
+from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups
 from ..datatypes import EntityDataSensor, EntityDataNumber, EntityDataSelect
 
 from homeassistant.const import UnitOfTemperature
