@@ -28,21 +28,26 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class ModbusSelectEntity(ModbusBaseEntity, SelectEntity):
     """Representation of a Select."""
 
-    def __init__(self, coordinator, group:ModbusGroup, key:str, modbusDataPoint:ModbusDatapoint):
+    def __init__(self, coordinator:ModbusCoordinator, group:ModbusGroup, key:str, modbusDataPoint:ModbusDatapoint):
         """Initialize ModbusBaseEntity."""
         super().__init__(coordinator, group, key, modbusDataPoint)
 
-        """Select Entity properties"""
+        """ Give coordinator handle to config value entity """
+        if group == ModbusDefaultGroups.UI and key == "Config Value Select":
+            coordinator.config_value_select = self   
+            self.entity_enabled = False
+
+    def _loadEntitySettings(self):
         if self._key == "Config Selection":
             self._options = self.coordinator.get_config_options()
         else:
-            self._options = modbusDataPoint.entity_data.options
+            self._options = self.modbusDataPoint.entity_data.options
 
     @property
     def current_option(self):
         try:
             if self._key == "Config Selection":
-                optionIndex = self.coordinator.config_selection
+                optionIndex = self.config_selection
                 option = self._options[optionIndex]
             else:
                 optionIndex = self.coordinator.get_value(self._group, self._key)
@@ -71,11 +76,12 @@ class ModbusSelectEntity(ModbusBaseEntity, SelectEntity):
         _LOGGER.debug("Select: %s", self._key)
         try:
             if self._key == "Config Selection":
-                await self.coordinator.config_select(option, value)
+                self.config_selection = value
+                await self.coordinator.config_select(option)
             else:           
                 _LOGGER.debug("Writing")
                 await self.coordinator.write_value(self._group, self._key, value)
         except Exception as err:
-            _LOGGER.debug("Error writing command: %s %s", self._group, self._key)
+            _LOGGER.debug("Error writing command: %s %s", self._group, self._key, exc_info=True)
         finally:
             self.async_schedule_update_ha_state(force_refresh=False)

@@ -1,14 +1,16 @@
 import async_timeout
+import copy
 import datetime as dt
 import logging
-import traceback
 
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, ConfigEntryNotReady, ConfigEntryError
 
 from .devices.helpers import load_device_class
-from .devices.datatypes import ModbusDefaultGroups
+from .devices.datatypes import ModbusDefaultGroups, ModbusDatapoint
+from .devices.datatypes import EntityDataSelect, EntityDataNumber
 from .devices.modbusdevice import ModbusDevice
+from .entity import ModbusBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,10 +40,9 @@ class ModbusCoordinator(DataUpdateCoordinator):
         self._modbusDevice: ModbusDevice | None = None
 
         # Storage for config selection
-        self.config_selection = 0
-
-        # Callback to entities
-        self._update_callbacks = {}  
+        self.config_value_select:ModbusBaseEntity = None
+        self.config_value_number:ModbusBaseEntity = None
+        self.config_value_active:ModbusBaseEntity = None
 
     async def _async_setup(self):
         # Load modbus device driver
@@ -116,16 +117,49 @@ class ModbusCoordinator(DataUpdateCoordinator):
     ################################
     ######## Configuration #########
     ################################   
-    # Register callback to entity
-    def registerOnUpdateCallback(self, entity, callbackfunc):
-        self._update_callbacks.update({entity: callbackfunc})
+    async def _swap_config_value_entity(self, datapoint: ModbusDatapoint):
+        _LOGGER.debug("Changing CONFIG value entity type")
 
-    async def config_select(self, key, value):
-        self.config_selection = value
+        # Disable old entity
+        if self.config_value_active is not None:
+            self.config_value_active.entity_enabled = False
+            self.config_value_active.async_schedule_update_ha_state()
+            self.config_value_active = None
+
+        # Select active entity
+        if isinstance(datapoint.entity_data, EntityDataNumber):
+            self.config_value_active = self.config_value_number
+        elif isinstance(datapoint.entity_data, EntityDataSelect):
+            self.config_value_active = self.config_value_select
+        else:
+            _LOGGER.warning("Entity type not supported for config!")
+            return
+
+        # Enable active entity
+        self.config_value_active.entity_enabled = True
+
+    async def config_select(self, key):
+        _LOGGER.debug("In config select: %s", key)
+
+        # Change type of entitiy for config value
+        old_dp = self.config_value_active.modbusDataPoint if self.config_value_active else None
+        new_dp = self._modbusDevice.Datapoints[ModbusDefaultGroups.CONFIG][key]
+
+        _LOGGER.debug("Dps: %s %s", old_dp, new_dp)
+
+        if old_dp is None or type(old_dp.entity_data) != type(new_dp.entity_data):
+            _LOGGER.debug("New type!")
+            await self._swap_config_value_entity(new_dp)
         try:
+            # Update entity settings and read value
+            self.config_value_active.modbusDataPoint = new_dp
+            self.config_value_active._group = ModbusDefaultGroups.CONFIG
+            self.config_value_active._key = key
+            self.config_value_active._loadEntitySettings()
             await self._modbusDevice.readValue(ModbusDefaultGroups.CONFIG, key)
         finally:
-            await self._update_callbacks["Config Value"](ModbusDefaultGroups.CONFIG, key)
+            _LOGGER.debug("Updating!")
+            self.config_value_active.async_schedule_update_ha_state()
 
     def get_config_options(self):
         options = {}

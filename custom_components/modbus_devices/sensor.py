@@ -32,13 +32,14 @@ class ModbusSensorEntity(ModbusBaseEntity, SensorEntity):
         """Initialize ModbusBaseEntity."""
         super().__init__(coordinator, group, key, modbusDataPoint)
 
+    def _loadEntitySettings(self):
         """Sensor Entity properties"""
-        self._attr_device_class = modbusDataPoint.entity_data.deviceClass
-        self._attr_state_class = modbusDataPoint.entity_data.stateClass
-        self._attr_native_unit_of_measurement = modbusDataPoint.entity_data.units
+        self._attr_device_class = self.modbusDataPoint.entity_data.deviceClass
+        self._attr_state_class = self.modbusDataPoint.entity_data.stateClass
+        self._attr_native_unit_of_measurement = self.modbusDataPoint.entity_data.units
 
         """Cusom Entity properties"""
-        self.enum = modbusDataPoint.entity_data.enum
+        self.enum = self.modbusDataPoint.entity_data.enum
 
     @property
     def native_value(self):

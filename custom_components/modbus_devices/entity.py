@@ -1,7 +1,6 @@
 """Base entity class for Modbus Devices integration."""
 import logging
 
-from collections import namedtuple
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .devices.datatypes import ModbusGroup, ModbusDatapoint
 
@@ -28,8 +27,21 @@ class ModbusBaseEntity(CoordinatorEntity):
         self._group = group
         self._key = key
 
+        self.modbusDataPoint = modbusDataPoint
+        self.entity_enabled = True
+        self._loadEntitySettings()
+
+    # Override by subslasses
+    def _loadEntitySettings(self):
+        pass
+
     @property
     def extra_state_attributes(self):
         """Return entity-specific state attributes."""
         attrs = self.coordinator.get_attrs(self._group, self._key)
         return attrs if attrs is not None else {}
+    
+    @property
+    def available(self):
+        # This allows us to mark entities as unavailiable, regardless of coordinator status
+        return self.entity_enabled and super().available

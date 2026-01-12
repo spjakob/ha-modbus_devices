@@ -33,8 +33,8 @@ class ModbusBinarySensorEntity(ModbusBaseEntity, BinarySensorEntity):
         """Initialize ModbusBaseEntity."""
         super().__init__(coordinator, group, key, modbusDataPoint)
 
-        """Sensor Entity properties"""
-        self._attr_device_class = modbusDataPoint.entity_data.deviceClass
+    def _loadEntitySettings(self):
+        self._attr_device_class = self.modbusDataPoint.entity_data.deviceClass
 
     @property
     def is_on(self):

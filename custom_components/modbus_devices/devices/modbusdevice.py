@@ -9,7 +9,7 @@ from pymodbus.exceptions import ModbusException
 from .connection import ConnectionParams, TCPConnectionParams, RTUConnectionParams
 from .const import ByteOrder, WordOrder, ModbusMode, ModbusPollMode
 from .datatypes import ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
-from .datatypes import EntityDataSelect, EntityDataNumber
+from .datatypes import EntityDataSelect, EntityDataNumber, EntityDataSensor
 from ..rtu_bus import RTUBusManager, RTUBusClient
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,7 +60,8 @@ class ModbusDevice():
         if self.Datapoints[ModbusDefaultGroups.CONFIG]:
             self.Datapoints[ModbusDefaultGroups.UI] = {
                 "Config Selection": ModbusDatapoint(entity_data=EntityDataSelect(category=EntityCategory.CONFIG)),
-                "Config Value": ModbusDatapoint(entity_data=EntityDataNumber(category=EntityCategory.CONFIG, min_value=0, max_value=65535, step=1))
+                "Config Value Number": ModbusDatapoint(entity_data=EntityDataNumber(category=EntityCategory.CONFIG)),
+                "Config Value Select": ModbusDatapoint(entity_data=EntityDataSelect(category=EntityCategory.CONFIG)),
             }
 
     def loadDatapoints(self):

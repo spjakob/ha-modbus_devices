@@ -32,8 +32,8 @@ class ModbusButtonEntity(ModbusBaseEntity, ButtonEntity):
         """Initialize ModbusBaseEntity."""
         super().__init__(coordinator, group, key, modbusDataPoint)
 
-        """Button Entity properties"""
-        self._attr_device_class = modbusDataPoint.entity_data.deviceClass
+    def _loadEntitySettings(self):
+        self._attr_device_class = self.modbusDataPoint.entity_data.deviceClass
 
     async def async_press(self) -> None:
         """ Write value to device """
