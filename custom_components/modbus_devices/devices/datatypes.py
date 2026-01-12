@@ -97,7 +97,8 @@ class ModbusDatapoint:
     value: int | float | str = 0                                # Scaled value, usually "read only"
     entity_data: EntityData | None = None                       # Entity parameters
 
-    def from_raw(self, registers: list[int], byte_order=ByteOrder.MSB, word_order=WordOrder.NORMAL):
+    def from_modbus(self, registers: list[int], byte_order=ByteOrder.MSB, word_order=WordOrder.NORMAL):
+        # Convert from modbus registers to formatted value
         if len(registers) != self.length:
             raise ValueError(f"Datapoint at address {self.address}: expected {self.length} registers, got {len(registers)}")
 
@@ -132,12 +133,17 @@ class ModbusDatapoint:
 
         elif self.type == ModbusDataType.STRING:
             try:
-                self.value = ''.join(chr(reg) for reg in registers)
+                # If device uses 1 register per char we remove the 0's
+                if all(b[i] == 0x00 for i in range(0, len(b), 2)):
+                    b = b[1::2]
+
+                # Stop at first NULL and decode
+                self.value = b.split(b"\x00", 1)[0].decode("ascii", errors="ignore")
             except ValueError:
                 self.value = ''
 
-    def to_raw(self, value, byte_order=ByteOrder.MSB, word_order=WordOrder.NORMAL) -> list[int]:
-        # Reverse scaling and offset
+    def to_modbus(self, value, byte_order=ByteOrder.MSB, word_order=WordOrder.NORMAL) -> list[int]:
+        # Convert from formatted value to modbus registers
         if self.type in (ModbusDataType.INT, ModbusDataType.UINT):
             scaled_value = int(round((value - self.offset) / self.scaling))
             b = scaled_value.to_bytes(self.length*2, byteorder='big', signed=(self.type == ModbusDataType.INT))
@@ -153,7 +159,9 @@ class ModbusDatapoint:
                 b = scaled_value.to_bytes(self.length*2, byteorder='big')
 
         elif self.type == ModbusDataType.STRING:
-            b = bytes(value.ljust(self.length*2, '\x00'), 'utf-8')
+            # Will we ever write a string? We don't know the format at all...
+            b = value.encode('utf-8')
+            b = b.ljust(self.length * 2, b'\x00')
 
         # Apply word swap if needed
         if word_order == WordOrder.SWAP and self.length > 1 and self.type != ModbusDataType.STRING:

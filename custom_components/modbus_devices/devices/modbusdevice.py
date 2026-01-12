@@ -138,7 +138,7 @@ class ModbusDevice():
             registers = response.registers[offset:offset + dp.length]
 
             try:
-                dp.from_raw(registers, self.byte_order, self.word_order)
+                dp.from_modbus(registers, self.byte_order, self.word_order)
             except Exception as exc:
                 _LOGGER.warning("Failed to decode datapoint %s in group %s (addr=%s len=%s raw=%s)", name, group, dp.address, dp.length, registers, exc_info=exc)
                 raise
@@ -166,7 +166,7 @@ class ModbusDevice():
 
         registers = response.registers[:length]
         try:
-            dp.from_raw(registers, self.byte_order, self.word_order)
+            dp.from_modbus(registers, self.byte_order, self.word_order)
         except Exception as exc:
             _LOGGER.warning("Failed to decode datapoint %s in group %s (addr=%s len=%s raw=%s)", key, group, dp.address, dp.length, registers, exc_info=exc)
             raise
@@ -188,7 +188,7 @@ class ModbusDevice():
             raise ValueError(f"Unsupported register length: {length}. Only 1 or 2 registers are supported.")
 
         # Get value as modbus registers
-        registers = datapoint.to_raw(value, self.byte_order, self.word_order)
+        registers = datapoint.to_modbus(value, self.byte_order, self.word_order)
 
         # Write the registers
         address = datapoint.address
