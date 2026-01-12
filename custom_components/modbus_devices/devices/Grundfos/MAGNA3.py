@@ -11,8 +11,6 @@ from ..datatypes import (
     EntityDataSelect,
 )
 from ..const import ModbusMode, ModbusPollMode
-from ..datatypes import ModbusDatapoint, ModbusGroup
-from ..datatypes import EntityDataSensor
 
 from homeassistant.const import (
     UnitOfPressure,
@@ -62,6 +60,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLUME_FLOW_RATE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
+                    precision=1,
                 ),
             ),
             "Relative Performance": ModbusDatapoint(

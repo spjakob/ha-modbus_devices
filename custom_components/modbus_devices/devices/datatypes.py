@@ -19,9 +19,10 @@ class EntityData:
 
 @dataclass
 class EntityDataSensor(EntityData):
-    stateClass: str = None              # None | Set to valid "SensorStateClass" to enable long term storage
-    units: str = None                   # None | from homeassistant.const import UnitOf....
-    enum: dict = field(default_factory=dict)
+    precision: int | None = None                # None
+    stateClass: str = None                      # None | Set to valid "SensorStateClass" to enable long term storage
+    units: str = None                           # None | from homeassistant.const import UnitOf....
+    enum: dict = field(default_factory=dict)    # String representation of integers
 
 @dataclass
 class EntityDataNumber(EntityData):
