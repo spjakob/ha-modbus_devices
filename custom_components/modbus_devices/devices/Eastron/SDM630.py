@@ -14,7 +14,6 @@ from ..datatypes import (
 )
 
 from homeassistant.const import (
-    UnitOfAngle,
     UnitOfElectricPotential,
     UnitOfElectricCurrent,
     UnitOfPower,
@@ -249,7 +248,7 @@ class Device(ModbusDevice):
                 type="float",
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfAngle.DEGREES,
+                    units="°",
                     icon="mdi:angle-acute",
                     enabled_default=False,
                 ),
@@ -260,7 +259,7 @@ class Device(ModbusDevice):
                 type="float",
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfAngle.DEGREES,
+                    units="°",
                     icon="mdi:angle-acute",
                     enabled_default=False,
                 ),
@@ -271,7 +270,7 @@ class Device(ModbusDevice):
                 type="float",
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfAngle.DEGREES,
+                    units="°",
                     icon="mdi:angle-acute",
                     enabled_default=False,
                 ),
@@ -359,7 +358,7 @@ class Device(ModbusDevice):
                 type="float",
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfAngle.DEGREES,
+                    units="°",
                     icon="mdi:angle-acute",
                     enabled_default=True,
                 ),
