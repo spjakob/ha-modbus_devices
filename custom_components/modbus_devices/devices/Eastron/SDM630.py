@@ -161,7 +161,7 @@ class Device(ModbusDevice):
                 type="float",
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.APPARENT_POWER,
-                    stateClass=SensorDeviceClass.MEASUREMENT,
+                    stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfApparentPower.VOLT_AMPERE,
                     enabled_default=True,
                 ),
