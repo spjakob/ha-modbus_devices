@@ -180,7 +180,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.REACTIVE_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfReactivePower.VAR,
+                    units=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
                     enabledDefault=True,
                 ),
             ),
@@ -191,7 +191,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.REACTIVE_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfReactivePower.VAR,
+                    units=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
                     enabledDefault=True,
                 ),
             ),
@@ -202,7 +202,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.REACTIVE_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfReactivePower.VAR,
+                    units=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
                     enabledDefault=True,
                 ),
             ),
@@ -334,7 +334,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.REACTIVE_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfReactivePower.VAR,
+                    units=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
                     enabledDefault=True,
                 ),
             ),
