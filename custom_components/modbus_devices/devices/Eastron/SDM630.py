@@ -20,10 +20,9 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfApparentPower,
     UnitOfReactivePower,
-    POWER_FACTOR,
+    DEGREE,
     UnitOfFrequency,
     PERCENTAGE,
-    UnitOfTime,
 )
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.button import ButtonDeviceClass
@@ -216,7 +215,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER_FACTOR,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=POWER_FACTOR,
+                    units=None,
                     enabled_default=False,
                 ),
             ),
@@ -227,7 +226,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER_FACTOR,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=POWER_FACTOR,
+                    units=None,
                     enabled_default=False,
                 ),
             ),
@@ -238,7 +237,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER_FACTOR,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=POWER_FACTOR,
+                    units=None,
                     enabled_default=False,
                 ),
             ),
@@ -248,7 +247,7 @@ class Device(ModbusDevice):
                 type="float",
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units="°",
+                    units=DEGREE,
                     icon="mdi:angle-acute",
                     enabled_default=False,
                 ),
@@ -259,7 +258,7 @@ class Device(ModbusDevice):
                 type="float",
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units="°",
+                    units=DEGREE,
                     icon="mdi:angle-acute",
                     enabled_default=False,
                 ),
@@ -270,7 +269,7 @@ class Device(ModbusDevice):
                 type="float",
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units="°",
+                    units=DEGREE,
                     icon="mdi:angle-acute",
                     enabled_default=False,
                 ),
@@ -348,7 +347,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.POWER_FACTOR,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=POWER_FACTOR,
+                    units=None,
                     enabled_default=False,
                 ),
             ),
@@ -358,7 +357,7 @@ class Device(ModbusDevice):
                 type="float",
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units="°",
+                    units=DEGREE,
                     icon="mdi:angle-acute",
                     enabled_default=True,
                 ),
@@ -758,7 +757,7 @@ class Device(ModbusDevice):
             "Serial number": ModbusDatapoint(
                 address=64512,
                 type="uint",
-                length=2,  # Assuming 2 registers for serial
+                length=2,
                 entity_data=EntityDataSensor(
                     category=EntityCategory.DIAGNOSTIC,
                     icon="mdi:information-outline",
