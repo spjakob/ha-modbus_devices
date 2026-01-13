@@ -10,7 +10,6 @@ from ..datatypes import (
     EntityDataSensor,
     EntityDataNumber,
     EntityDataSelect,
-    EntityDataButton,
 )
 
 from homeassistant.const import (
@@ -25,7 +24,6 @@ from homeassistant.const import (
     PERCENTAGE,
 )
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.components.button import ButtonDeviceClass
 from homeassistant.helpers.entity import EntityCategory
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,7 +49,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLTAGE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricPotential.VOLT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 2 line to neutral volts": ModbusDatapoint(
@@ -62,7 +60,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLTAGE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricPotential.VOLT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 3 line to neutral volts": ModbusDatapoint(
@@ -73,7 +71,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLTAGE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricPotential.VOLT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 1 current": ModbusDatapoint(
@@ -84,7 +82,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.CURRENT,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricCurrent.AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 2 current": ModbusDatapoint(
@@ -95,7 +93,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.CURRENT,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricCurrent.AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 3 current": ModbusDatapoint(
@@ -106,7 +104,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.CURRENT,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricCurrent.AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 1 power": ModbusDatapoint(
@@ -117,7 +115,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfPower.WATT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 2 power": ModbusDatapoint(
@@ -128,7 +126,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfPower.WATT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 3 power": ModbusDatapoint(
@@ -139,7 +137,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfPower.WATT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 1 volt amps (VA)": ModbusDatapoint(
@@ -150,7 +148,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.APPARENT_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfApparentPower.VOLT_AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 2 volt amps (VA)": ModbusDatapoint(
@@ -161,7 +159,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.APPARENT_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfApparentPower.VOLT_AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 3 volt amps (VA)": ModbusDatapoint(
@@ -172,7 +170,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.APPARENT_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfApparentPower.VOLT_AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 1 reactive power": ModbusDatapoint(
@@ -183,7 +181,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.REACTIVE_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfReactivePower.VAR,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 2 reactive power": ModbusDatapoint(
@@ -194,7 +192,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.REACTIVE_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfReactivePower.VAR,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 3 reactive power": ModbusDatapoint(
@@ -205,7 +203,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.REACTIVE_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfReactivePower.VAR,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 1 power factor": ModbusDatapoint(
@@ -216,7 +214,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.POWER_FACTOR,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=None,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Phase 2 power factor": ModbusDatapoint(
@@ -227,7 +225,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.POWER_FACTOR,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=None,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Phase 3 power factor": ModbusDatapoint(
@@ -238,7 +236,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.POWER_FACTOR,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=None,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Phase 1 phase angle": ModbusDatapoint(
@@ -249,7 +247,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=DEGREE,
                     icon="mdi:angle-acute",
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Phase 2 phase angle": ModbusDatapoint(
@@ -260,7 +258,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=DEGREE,
                     icon="mdi:angle-acute",
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Phase 3 phase angle": ModbusDatapoint(
@@ -271,7 +269,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=DEGREE,
                     icon="mdi:angle-acute",
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Average line to neutral volts": ModbusDatapoint(
@@ -282,7 +280,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLTAGE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricPotential.VOLT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Average line current": ModbusDatapoint(
@@ -293,7 +291,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.CURRENT,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricCurrent.AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Sum of line currents": ModbusDatapoint(
@@ -304,7 +302,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.CURRENT,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricCurrent.AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total system power": ModbusDatapoint(
@@ -315,7 +313,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfPower.WATT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total system volt amps": ModbusDatapoint(
@@ -326,7 +324,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.APPARENT_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfApparentPower.VOLT_AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total system VAr": ModbusDatapoint(
@@ -337,7 +335,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.REACTIVE_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfReactivePower.VAR,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total system power factor": ModbusDatapoint(
@@ -348,7 +346,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.POWER_FACTOR,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=None,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Total system phase angle": ModbusDatapoint(
@@ -359,7 +357,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=DEGREE,
                     icon="mdi:angle-acute",
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Frequency of supply voltages": ModbusDatapoint(
@@ -370,7 +368,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.FREQUENCY,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfFrequency.HERTZ,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total Import kWh": ModbusDatapoint(
@@ -381,7 +379,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units=UnitOfEnergy.KILO_WATT_HOUR,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total Export kWh": ModbusDatapoint(
@@ -392,7 +390,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units=UnitOfEnergy.KILO_WATT_HOUR,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total Import kVArh": ModbusDatapoint(
@@ -403,7 +401,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVArh",
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total Export kVArh": ModbusDatapoint(
@@ -414,7 +412,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVArh",
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total VAh": ModbusDatapoint(
@@ -425,7 +423,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVAh",
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Ah": ModbusDatapoint(
@@ -435,7 +433,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="Ah",
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total system power demand": ModbusDatapoint(
@@ -446,7 +444,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfPower.WATT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Maximum total system power demand": ModbusDatapoint(
@@ -457,7 +455,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.APPARENT_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfApparentPower.VOLT_AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total system VA demand": ModbusDatapoint(
@@ -468,7 +466,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.APPARENT_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfApparentPower.VOLT_AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Max total system VA demand": ModbusDatapoint(
@@ -479,7 +477,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.APPARENT_POWER,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfApparentPower.VOLT_AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Neutral current demand": ModbusDatapoint(
@@ -490,7 +488,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.CURRENT,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricCurrent.AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Max neutral current demand": ModbusDatapoint(
@@ -501,7 +499,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.CURRENT,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricCurrent.AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Line 1 to Line 2 volts": ModbusDatapoint(
@@ -512,7 +510,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLTAGE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricPotential.VOLT,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Line 2 to Line 3 volts": ModbusDatapoint(
@@ -523,7 +521,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLTAGE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricPotential.VOLT,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Line 3 to Line 1 volts": ModbusDatapoint(
@@ -534,7 +532,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLTAGE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricPotential.VOLT,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Average line to line volts": ModbusDatapoint(
@@ -545,7 +543,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.VOLTAGE,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricPotential.VOLT,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Neutral current": ModbusDatapoint(
@@ -556,7 +554,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.CURRENT,
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=UnitOfElectricCurrent.AMPERE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 1 L/N volts THD": ModbusDatapoint(
@@ -566,7 +564,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=PERCENTAGE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Phase 1 Current THD": ModbusDatapoint(
@@ -576,7 +574,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=PERCENTAGE,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total kWh": ModbusDatapoint(
@@ -587,7 +585,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units=UnitOfEnergy.KILO_WATT_HOUR,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Total kVArh": ModbusDatapoint(
@@ -598,7 +596,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVArh",
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "L3 total kVArh": ModbusDatapoint(
@@ -609,7 +607,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVArh",
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
         }
@@ -632,7 +630,7 @@ class Device(ModbusDevice):
                         60: "60 min",
                     },
                     category=EntityCategory.CONFIG,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "System Type": ModbusDatapoint(
@@ -642,7 +640,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSelect(
                     options={1: "1P2W", 2: "3P3W", 3: "3P4W"},
                     category=EntityCategory.CONFIG,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Pulse1 Width": ModbusDatapoint(
@@ -652,7 +650,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSelect(
                     options={60: "60 ms", 100: "100 ms", 200: "200 ms"},
                     category=EntityCategory.CONFIG,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Password Lock": ModbusDatapoint(
@@ -662,7 +660,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSelect(
                     options={0: "Disabled", 1: "Enabled"},
                     category=EntityCategory.CONFIG,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Network Parity Stop": ModbusDatapoint(
@@ -672,7 +670,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSelect(
                     options={0: "N,1", 1: "E,1", 2: "O,1", 3: "N,2"},
                     category=EntityCategory.DIAGNOSTIC,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Network Node": ModbusDatapoint(
@@ -684,7 +682,7 @@ class Device(ModbusDevice):
                     max_value=247,
                     step=1,
                     category=EntityCategory.DIAGNOSTIC,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Pulse1 Divisor1": ModbusDatapoint(
@@ -701,7 +699,7 @@ class Device(ModbusDevice):
                         5: "100 kWh/imp",
                     },
                     category=EntityCategory.CONFIG,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Password": ModbusDatapoint(
@@ -713,7 +711,7 @@ class Device(ModbusDevice):
                     max_value=9999,
                     step=1,
                     category=EntityCategory.CONFIG,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Network Baud Rate": ModbusDatapoint(
@@ -729,7 +727,7 @@ class Device(ModbusDevice):
                         4: "38400",
                     },
                     category=EntityCategory.DIAGNOSTIC,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Pulse 1 Energy Type": ModbusDatapoint(
@@ -739,7 +737,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSelect(
                     options={1: "Active Energy", 2: "Reactive Energy"},
                     category=EntityCategory.CONFIG,
-                    enabled_default=False,
+                    enabledDefault=False,
                 ),
             ),
             "Reset": ModbusDatapoint(
@@ -751,7 +749,7 @@ class Device(ModbusDevice):
                     max_value=9999,
                     step=1,
                     category=EntityCategory.CONFIG,
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
             "Serial number": ModbusDatapoint(
@@ -761,7 +759,7 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     category=EntityCategory.DIAGNOSTIC,
                     icon="mdi:information-outline",
-                    enabled_default=True,
+                    enabledDefault=True,
                 ),
             ),
         }
