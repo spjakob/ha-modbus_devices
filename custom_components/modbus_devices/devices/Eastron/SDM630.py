@@ -30,6 +30,8 @@ _LOGGER = logging.getLogger(__name__)
 
 # Define groups
 GROUP_MAIN = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_MAIN2 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_MAIN3 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 
 class Device(ModbusDevice):
     """Representation of an Eastron SDM630 Modbus device."""
@@ -502,6 +504,9 @@ class Device(ModbusDevice):
                     enabledDefault=True,
                 ),
             ),
+        }
+        # MAIN SENSORS (INPUT REGISTERS)
+        self.Datapoints[GROUP_MAIN2] = {
             "Line 1 to Line 2 volts": ModbusDatapoint(
                 address=200,
                 length=2,
@@ -577,6 +582,9 @@ class Device(ModbusDevice):
                     enabledDefault=True,
                 ),
             ),
+        }
+        # MAIN SENSORS (INPUT REGISTERS)
+        self.Datapoints[GROUP_MAIN3] = {
             "Total kWh": ModbusDatapoint(
                 address=342,
                 length=2,
