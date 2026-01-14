@@ -449,7 +449,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="Ah",
                     enabledDefault=True,
-                    precision=2,
+                    precision=0,
                 ),
             ),
             "Total system power demand": ModbusDatapoint(
