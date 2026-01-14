@@ -1033,8 +1033,8 @@ class Device(ModbusDevice):
         self.Datapoints[ModbusDefaultGroups.CONFIG] = {
             "Demand Period": ModbusDatapoint(
                 address=2,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataSelect(
                     options={
                         0: "0 min",
@@ -1052,8 +1052,8 @@ class Device(ModbusDevice):
             ),
             "System Type": ModbusDatapoint(
                 address=10,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataSelect(
                     options={1: "1P2W", 2: "3P3W", 3: "3P4W"},
                     category=EntityCategory.CONFIG,
@@ -1062,8 +1062,8 @@ class Device(ModbusDevice):
             ),
             "Pulse1 Width": ModbusDatapoint(
                 address=12,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataSelect(
                     options={60: "60 ms", 100: "100 ms", 200: "200 ms"},
                     category=EntityCategory.CONFIG,
@@ -1072,8 +1072,8 @@ class Device(ModbusDevice):
             ),
             "Password Lock": ModbusDatapoint(
                 address=14,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataSelect(
                     options={0: "Disabled", 1: "Enabled"},
                     category=EntityCategory.CONFIG,
@@ -1082,8 +1082,8 @@ class Device(ModbusDevice):
             ),
             "Network Parity Stop": ModbusDatapoint(
                 address=18,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataSelect(
                     options={0: "N,1", 1: "E,1", 2: "O,1", 3: "N,2"},
                     category=EntityCategory.DIAGNOSTIC,
@@ -1092,8 +1092,8 @@ class Device(ModbusDevice):
             ),
             "Network Node": ModbusDatapoint(
                 address=20,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataNumber(
                     min_value=1,
                     max_value=247,
@@ -1104,8 +1104,8 @@ class Device(ModbusDevice):
             ),
             "Pulse1 Divisor1": ModbusDatapoint(
                 address=22,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataSelect(
                     options={
                         0: "0.001 kWh/imp",
@@ -1121,8 +1121,8 @@ class Device(ModbusDevice):
             ),
             "Password": ModbusDatapoint(
                 address=24,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataNumber(
                     min_value=0,
                     max_value=9999,
@@ -1133,8 +1133,8 @@ class Device(ModbusDevice):
             ),
             "Network Baud Rate": ModbusDatapoint(
                 address=28,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataSelect(
                     options={
                         0: "2400",
@@ -1149,8 +1149,8 @@ class Device(ModbusDevice):
             ),
             "Pulse 1 Energy Type": ModbusDatapoint(
                 address=86,
-                type="uint",
-                length=1,
+                type="float",
+                length=2,
                 entity_data=EntityDataSelect(
                     options={1: "Active Energy", 2: "Reactive Energy"},
                     category=EntityCategory.CONFIG,
