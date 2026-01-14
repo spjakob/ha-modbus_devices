@@ -254,6 +254,7 @@ class Device(ModbusDevice):
                     units=DEGREE,
                     icon="mdi:angle-acute",
                     enabledDefault=False,
+                    precision=0,
                 ),
             ),
             "Phase 2 phase angle": ModbusDatapoint(
@@ -265,6 +266,7 @@ class Device(ModbusDevice):
                     units=DEGREE,
                     icon="mdi:angle-acute",
                     enabledDefault=False,
+                    precision=0,
                 ),
             ),
             "Phase 3 phase angle": ModbusDatapoint(
@@ -276,6 +278,7 @@ class Device(ModbusDevice):
                     units=DEGREE,
                     icon="mdi:angle-acute",
                     enabledDefault=False,
+                    precision=0,
                 ),
             ),
             "Average line to neutral volts": ModbusDatapoint(
@@ -363,7 +366,8 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=DEGREE,
                     icon="mdi:angle-acute",
-                    enabledDefault=True,
+                    enabledDefault=False,
+                    precision=0,
                 ),
             ),
             "Frequency of supply voltages": ModbusDatapoint(
@@ -386,6 +390,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units=UnitOfEnergy.KILO_WATT_HOUR,
                     enabledDefault=True,
+                    precision=0,
                 ),
             ),
             "Total Export kWh": ModbusDatapoint(
@@ -397,6 +402,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units=UnitOfEnergy.KILO_WATT_HOUR,
                     enabledDefault=True,
+                    precision=0,
                 ),
             ),
             "Total Import kVArh": ModbusDatapoint(
@@ -408,6 +414,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVArh",
                     enabledDefault=True,
+                    precision=0,
                 ),
             ),
             "Total Export kVArh": ModbusDatapoint(
@@ -419,6 +426,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVArh",
                     enabledDefault=True,
+                    precision=0,
                 ),
             ),
             "Total VAh": ModbusDatapoint(
@@ -430,6 +438,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVAh",
                     enabledDefault=True,
+                    precision=0,
                 ),
             ),
             "Ah": ModbusDatapoint(
@@ -440,6 +449,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="Ah",
                     enabledDefault=True,
+                    precision=2,
                 ),
             ),
             "Total system power demand": ModbusDatapoint(
@@ -557,6 +567,8 @@ class Device(ModbusDevice):
                     enabledDefault=True,
                 ),
             ),
+        }
+        self.Datapoints[GROUP_INPUT_4] = {
             "Neutral current": ModbusDatapoint(
                 address=224,
                 length=2,
@@ -576,6 +588,29 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=PERCENTAGE,
                     enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Phase 2 L/N volts THD": ModbusDatapoint(
+                address=236,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Phase 3 L/N volts THD": ModbusDatapoint(
+                address=238,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=True,
+                    precision=2,
                 ),
             ),
             "Phase 1 Current THD": ModbusDatapoint(
@@ -586,11 +621,172 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.MEASUREMENT,
                     units=PERCENTAGE,
                     enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Phase 2 Current THD": ModbusDatapoint(
+                address=242,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Phase 3 Current THD": ModbusDatapoint(
+                address=244,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Average line to neutral volts THD": ModbusDatapoint(
+                address=248,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Average line current THD": ModbusDatapoint(
+                address=250,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Phase 1 current demand": ModbusDatapoint(
+                address=258,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.CURRENT,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfElectricCurrent.AMPERE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Phase 2 current demand": ModbusDatapoint(
+                address=260,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.CURRENT,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfElectricCurrent.AMPERE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Phase 3 current demand": ModbusDatapoint(
+                address=262,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.CURRENT,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfElectricCurrent.AMPERE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Maximum phase 1 current demand": ModbusDatapoint(
+                address=264,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.CURRENT,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfElectricCurrent.AMPERE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Maximum phase 2 current demand": ModbusDatapoint(
+                address=266,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.CURRENT,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfElectricCurrent.AMPERE,
+                    enabledDefault=True,
+                    precision=2,
+                ),
+            ),
+            "Maximum phase 3 current demand": ModbusDatapoint(
+                address=268,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.CURRENT,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfElectricCurrent.AMPERE,
+                    enabledDefault=True,
+                    precision=2,
                 ),
             ),
         }
         # MAIN SENSORS (INPUT REGISTERS)
-        self.Datapoints[GROUP_INPUT_4] = {
+        self.Datapoints[GROUP_INPUT_5] = {
+            "Line 1 to line 2 volts THD": ModbusDatapoint(
+                address=334,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=False,
+                    precision=2,
+                ),
+            ),
+            "Line 2 to line 3 volts THD": ModbusDatapoint(
+                address=336,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=False,
+                    precision=2,
+                ),
+            ),
+            "Line 3 to line 1 volts THD": ModbusDatapoint(
+                address=338,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=False,
+                    precision=2,
+                ),
+            ),
+            "Average line to line volts THD": ModbusDatapoint(
+                address=340,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=PERCENTAGE,
+                    enabledDefault=False,
+                    precision=2,
+                ),
+            ),
             "Total kWh": ModbusDatapoint(
                 address=342,
                 length=2,
@@ -600,6 +796,7 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units=UnitOfEnergy.KILO_WATT_HOUR,
                     enabledDefault=True,
+                    precision=0,
                 ),
             ),
             "Total kVArh": ModbusDatapoint(
@@ -611,11 +808,214 @@ class Device(ModbusDevice):
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVArh",
                     enabledDefault=True,
+                    precision=0,
                 ),
             ),
-        }
-        self.Datapoints[GROUP_INPUT_5] = {
-            "L3 total kVArh": ModbusDatapoint(
+            "L1 import kwh": ModbusDatapoint(
+                address=346,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR,
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L2 import kwh": ModbusDatapoint(
+                address=348,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR,
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L3 import kWh": ModbusDatapoint(
+                address=350,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR,
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L1 export kWh": ModbusDatapoint(
+                address=352,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR,
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L2 export kwh": ModbusDatapoint(
+                address=354,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR,
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L3 export kWh": ModbusDatapoint(
+                address=356,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR,
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L1 total kwh": ModbusDatapoint(
+                address=358,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR,
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L2 total kWh": ModbusDatapoint(
+                address=360,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR,
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L3 total kwh": ModbusDatapoint(
+                address=362,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units=UnitOfEnergy.KILO_WATT_HOUR,
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L1 import kvarh": ModbusDatapoint(
+                address=364,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units="kVArh",
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L2 import kvarh": ModbusDatapoint(
+                address=366,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units="kVArh",
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L3 import kvarh": ModbusDatapoint(
+                address=368,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units="kVArh",
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L1 export kvarh": ModbusDatapoint(
+                address=370,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units="kVArh",
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L2 export kvarh": ModbusDatapoint(
+                address=372,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units="kVArh",
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L3 export kvarh": ModbusDatapoint(
+                address=374,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units="kVArh",
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L1 total kvarh": ModbusDatapoint(
+                address=376,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units="kVArh",
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L2 total kvarh": ModbusDatapoint(
+                address=378,
+                length=2,
+                type="float",
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.ENERGY,
+                    stateClass=SensorStateClass.TOTAL_INCREASING,
+                    units="kVArh",
+                    enabledDefault=False,
+                    precision=0,
+                ),
+            ),
+            "L3 total kvarh": ModbusDatapoint(
                 address=380,
                 length=2,
                 type="float",
@@ -623,7 +1023,8 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.ENERGY,
                     stateClass=SensorStateClass.TOTAL_INCREASING,
                     units="kVArh",
-                    enabledDefault=True,
+                    enabledDefault=False,
+                    precision=0,
                 ),
             ),
         }
