@@ -1,6 +1,7 @@
 """Base entity class for Modbus Devices integration."""
 import logging
 
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .devices.datatypes import ModbusGroup, ModbusDatapoint
 
@@ -28,7 +29,6 @@ class ModbusBaseEntity(CoordinatorEntity):
         self._key = key
 
         self.modbusDataPoint = modbusDataPoint
-        self.entity_enabled = True
         self._loadEntitySettings()
 
     # Override by subslasses
@@ -40,8 +40,17 @@ class ModbusBaseEntity(CoordinatorEntity):
         """Return entity-specific state attributes."""
         attrs = self.coordinator.get_attrs(self._group, self._key)
         return attrs if attrs is not None else {}
-    
-    @property
-    def available(self):
-        # This allows us to mark entities as unavailiable, regardless of coordinator status
-        return self.entity_enabled and super().available
+
+    def toggle_entity_visibility(self, hass, visible: bool):
+        """Hide or show this entity on the device page at runtime."""
+        ent_reg = er.async_get(hass)
+
+        if visible:
+            # Restore original device_id
+            ent_reg.async_update_entity(self.entity_id, device_id=self.coordinator.device_id)
+        else:
+            # Detach from device
+            ent_reg.async_update_entity(self.entity_id, device_id=None)
+
+        # Refresh frontend immediately
+        self.async_write_ha_state()

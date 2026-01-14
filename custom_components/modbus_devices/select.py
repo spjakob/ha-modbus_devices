@@ -34,8 +34,8 @@ class ModbusSelectEntity(ModbusBaseEntity, SelectEntity):
 
         """ Give coordinator handle to config value entity """
         if group == ModbusDefaultGroups.UI and key == "Config Value Select":
-            coordinator.config_value_select = self   
-            self.entity_enabled = False
+            coordinator.config_value_select = self
+            self._attr_device_info = None       # Hide entity
 
     def _loadEntitySettings(self):
         if self._key == "Config Selection":

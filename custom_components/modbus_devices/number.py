@@ -35,8 +35,8 @@ class ModbusNumberEntity(ModbusBaseEntity, NumberEntity):
 
         """ Give coordinator handle to config value entity """
         if group == ModbusDefaultGroups.UI and key == "Config Value Number":
-            coordinator.config_value_number = self   
-            self.entity_enabled = False
+            coordinator.config_value_number = self 
+            self._attr_device_info = None       # Hide entity
 
     def _loadEntitySettings(self):
         self._attr_device_class = self.modbusDataPoint.entity_data.deviceClass

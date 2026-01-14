@@ -110,7 +110,7 @@ class Device(ModbusDevice):
             ),
             "Total Power (Electrical)": ModbusDatapoint(
                 address=311,
-                length=2,
+                register_count=2,
                 type="uint",
                 scaling=1,
                 entity_data=EntityDataSensor(
@@ -162,7 +162,7 @@ class Device(ModbusDevice):
             ),
             "Operating Time": ModbusDatapoint(
                 address=326,
-                length=2,
+                register_count=2,
                 type="uint",
                 scaling=1,
                 entity_data=EntityDataSensor(
@@ -173,7 +173,7 @@ class Device(ModbusDevice):
             ),
             "Total Energy (Electrical)": ModbusDatapoint(
                 address=331,
-                length=2,
+                register_count=2,
                 type="uint",
                 scaling=1,
                 entity_data=EntityDataSensor(
@@ -184,7 +184,7 @@ class Device(ModbusDevice):
             ),
             "Number of Starts": ModbusDatapoint(
                 address=333,
-                length=2,
+                register_count=2,
                 type="uint",
                 scaling=1,
                 entity_data=EntityDataSensor(
@@ -232,7 +232,7 @@ class Device(ModbusDevice):
             ),
             "Heat Energy": ModbusDatapoint(
                 address=351,
-                length=2,
+                register_count=2,
                 type="uint",
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.ENERGY,
@@ -242,7 +242,7 @@ class Device(ModbusDevice):
             ),
             "Heat Power": ModbusDatapoint(
                 address=353,
-                length=2,
+                register_count=2,
                 type="uint",
                 scaling=0.001,
                 entity_data=EntityDataSensor(
@@ -262,7 +262,7 @@ class Device(ModbusDevice):
             ),
             "Volume 1": ModbusDatapoint(
                 address=356,
-                length=2,
+                register_count=2,
                 type="uint",
                 scaling=0.01,
                 entity_data=EntityDataSensor(
@@ -273,7 +273,7 @@ class Device(ModbusDevice):
             ),
             "Volume 2": ModbusDatapoint(
                 address=360,
-                length=2,
+                register_count=2,
                 type="uint",
                 scaling=0.01,
                 entity_data=EntityDataSensor(

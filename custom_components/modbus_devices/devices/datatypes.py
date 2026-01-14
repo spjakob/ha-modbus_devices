@@ -4,7 +4,6 @@ import uuid
 from .const import ByteOrder, WordOrder, ModbusDataType, ModbusMode, ModbusPollMode
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Literal
 
 ###########################################
 ###### DATA TYPES FOR HOME ASSISTANT ######
@@ -91,7 +90,7 @@ class ModbusDefaultGroups(Enum):
 @dataclass
 class ModbusDatapoint:
     address: int = 0                                            # 0-indexed address
-    length: int = 1                                             # Number of registers
+    register_count: int = 1                                     # Number of registers
     scaling: float = 1                                          # Multiplier for raw value  
     offset: float = 0.0                                         # Offset     
     type: ModbusDataType = ModbusDataType.INT                   # Type of the datapoint
@@ -100,8 +99,8 @@ class ModbusDatapoint:
 
     def from_modbus(self, registers: list[int], byte_order=ByteOrder.MSB, word_order=WordOrder.NORMAL):
         # Convert from modbus registers to formatted value
-        if len(registers) != self.length:
-            raise ValueError(f"Datapoint at address {self.address}: expected {self.length} registers, got {len(registers)}")
+        if len(registers) != self.register_count:
+            raise ValueError(f"Datapoint at address {self.address}: expected {self.register_count} registers, got {len(registers)}")
 
         # Convert registers to bytes with correct per-register byte order
         b = bytearray()
@@ -123,59 +122,60 @@ class ModbusDatapoint:
                 self.value = int(calculated_value)
 
         elif self.type == ModbusDataType.FLOAT:
-            if self.length == 2:
+            if self.register_count == 2:
                 self.value = struct.unpack('>f', b)[0] * self.scaling + self.offset
-            elif self.length == 4:
+            elif self.register_count == 4:
                 self.value = struct.unpack('>d', b)[0] * self.scaling + self.offset
             else:
                 # Fallback: treat as integer
                 combined_value = int.from_bytes(b, byteorder='big')
                 self.value = combined_value * self.scaling + self.offset
 
-        elif self.type == ModbusDataType.STRING:
+        elif self.type in (ModbusDataType.STRING1, ModbusDataType.STRING2):
             try:
-                # If device uses 1 register per char we remove the 0's
-                if all(b[i] == 0x00 for i in range(0, len(b), 2)):
-                    b = b[1::2]
-
-                # Stop at first NULL and decode
-                self.value = b.split(b"\x00", 1)[0].decode("ascii", errors="ignore")
-            except ValueError:
+                # For STRING1, take only the low byte of each register
+                b_chars = b[1::2] if self.type == ModbusDataType.STRING1 else b
+                
+                # Stop at first NULL byte and decode ASCII
+                self.value = b_chars.split(b"\x00", 1)[0].decode("ascii", errors="ignore")
+            except Exception:
                 self.value = ''
 
     def to_modbus(self, value, byte_order=ByteOrder.MSB, word_order=WordOrder.NORMAL) -> list[int]:
         # Convert from formatted value to modbus registers
         if self.type in (ModbusDataType.INT, ModbusDataType.UINT):
             scaled_value = int(round((value - self.offset) / self.scaling))
-            b = scaled_value.to_bytes(self.length*2, byteorder='big', signed=(self.type == ModbusDataType.INT))
+            b = scaled_value.to_bytes(self.register_count*2, byteorder='big', signed=(self.type == ModbusDataType.INT))
 
         elif self.type == ModbusDataType.FLOAT:
             scaled_value = (value - self.offset) / self.scaling
-            if self.length == 2:
+            if self.register_count == 2:
                 b = struct.pack('>f', scaled_value)
-            elif self.length == 4:
+            elif self.register_count == 4:
                 b = struct.pack('>d', scaled_value)
             else:
                 scaled_value = int(round(scaled_value))
-                b = scaled_value.to_bytes(self.length*2, byteorder='big')
+                b = scaled_value.to_bytes(self.register_count*2, byteorder='big')
 
-        elif self.type == ModbusDataType.STRING:
-            # Will we ever write a string? We don't know the format at all...
-            b = value.encode('utf-8')
-            b = b.ljust(self.length * 2, b'\x00')
+        elif self.type in (ModbusDataType.STRING1, ModbusDataType.STRING2):
+            # Encode string as ASCII
+            b = value.encode('ascii', errors='ignore')
+
+            if self.type == ModbusDataType.STRING1:
+                # 1 char per register → low byte only, pad each register
+                b = bytearray([x for c in b for x in (0x00, c)])
+
+            # Pad to register_count*2
+            b = b.ljust(self.register_count*2, b'\x00')
 
         # Apply word swap if needed
-        if word_order == WordOrder.SWAP and self.length > 1 and self.type != ModbusDataType.STRING:
+        if word_order == WordOrder.SWAP and self.register_count > 1 and self.type not in (ModbusDataType.STRING1, ModbusDataType.STRING2):
             b = self.modbus_word_swap(b)
 
         # Convert to registers with per-register byte order
         registers = []
         for i in range(0, len(b), 2):
-            reg_bytes = b[i:i+2]
-            if byte_order == ByteOrder.MSB:
-                registers.append(int.from_bytes(reg_bytes, byteorder='big'))
-            else:
-                registers.append(int.from_bytes(reg_bytes, byteorder='little'))
+            registers.append(int.from_bytes(b[i:i+2], byteorder='big' if byte_order == ByteOrder.MSB else 'little'))
 
         return registers
     

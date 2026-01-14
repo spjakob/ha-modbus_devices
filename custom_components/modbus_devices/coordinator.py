@@ -122,8 +122,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
 
         # Disable old entity
         if self.config_value_active is not None:
-            self.config_value_active.entity_enabled = False
-            self.config_value_active.async_schedule_update_ha_state()
+            self.config_value_active.toggle_entity_visibility(self.hass, False)
             self.config_value_active = None
 
         # Select active entity
@@ -136,7 +135,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
             return
 
         # Enable active entity
-        self.config_value_active.entity_enabled = True
+        self.config_value_active.toggle_entity_visibility(self.hass, True)
 
     async def config_select(self, key):
         _LOGGER.debug("In config select: %s", key)
