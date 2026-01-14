@@ -29,9 +29,13 @@ from homeassistant.helpers.entity import EntityCategory
 _LOGGER = logging.getLogger(__name__)
 
 # Define groups
-GROUP_MAIN = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_MAIN2 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_MAIN3 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_1 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_2 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_3 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_4 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_5 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_HOLDING_RESET = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
+GROUP_HOLDING_INFO = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
 
 class Device(ModbusDevice):
     """Representation of an Eastron SDM630 Modbus device."""
@@ -42,7 +46,7 @@ class Device(ModbusDevice):
 
     def loadDatapoints(self):
         # MAIN SENSORS (INPUT REGISTERS)
-        self.Datapoints[GROUP_MAIN] = {
+        self.Datapoints[GROUP_INPUT_1] = {
             "Phase 1 line to neutral volts": ModbusDatapoint(
                 address=0,
                 length=2,
@@ -460,6 +464,8 @@ class Device(ModbusDevice):
                     enabledDefault=True,
                 ),
             ),
+        }
+        self.Datapoints[GROUP_INPUT_2] = {
             "Total system VA demand": ModbusDatapoint(
                 address=100,
                 length=2,
@@ -506,7 +512,7 @@ class Device(ModbusDevice):
             ),
         }
         # MAIN SENSORS (INPUT REGISTERS)
-        self.Datapoints[GROUP_MAIN2] = {
+        self.Datapoints[GROUP_INPUT_3] = {
             "Line 1 to Line 2 volts": ModbusDatapoint(
                 address=200,
                 length=2,
@@ -584,7 +590,7 @@ class Device(ModbusDevice):
             ),
         }
         # MAIN SENSORS (INPUT REGISTERS)
-        self.Datapoints[GROUP_MAIN3] = {
+        self.Datapoints[GROUP_INPUT_4] = {
             "Total kWh": ModbusDatapoint(
                 address=342,
                 length=2,
@@ -607,6 +613,8 @@ class Device(ModbusDevice):
                     enabledDefault=True,
                 ),
             ),
+        }
+        self.Datapoints[GROUP_INPUT_5] = {
             "L3 total kVArh": ModbusDatapoint(
                 address=380,
                 length=2,
@@ -748,6 +756,8 @@ class Device(ModbusDevice):
                     enabledDefault=False,
                 ),
             ),
+        }
+        self.Datapoints[GROUP_HOLDING_RESET] = {
             "Reset": ModbusDatapoint(
                 address=61456,
                 type="uint",
@@ -760,6 +770,8 @@ class Device(ModbusDevice):
                     enabledDefault=True,
                 ),
             ),
+        }
+        self.Datapoints[GROUP_HOLDING_INFO] = {
             "Serial number": ModbusDatapoint(
                 address=64512,
                 type="uint",
