@@ -6,12 +6,16 @@ from importlib import import_module
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def get_available_drivers():
     # Get the base path to the "devices" folder
-    base_path = os.path.dirname(os.path.abspath(__file__))  # Path to "devices/helpers.py"
+    base_path = os.path.dirname(
+        os.path.abspath(__file__)
+    )  # Path to "devices/helpers.py"
 
     # Offload the blocking os.walk() operation to a separate thread
     return await asyncio.to_thread(scan_drivers, base_path)
+
 
 def scan_drivers(base_path):
     drivers = []
@@ -26,26 +30,33 @@ def scan_drivers(base_path):
                 drivers.append(driver_path)
     return drivers
 
+
 async def load_device_class(driver_name):
     # Define the base package path
-    base_package = "custom_components.modbus_devices"  # Your custom integration package path
-    
+    base_package = (
+        "custom_components.modbus_devices"  # Your custom integration package path
+    )
+
     # Create the module path (e.g., "devices.Trox.TVE")
     module_path = f".devices.{driver_name}"
 
     try:
         # Dynamically import the module
-        #driver_module = importlib.import_module(module_path, package=base_package)
-        driver_module = await asyncio.to_thread(import_module, module_path, base_package)
+        # driver_module = importlib.import_module(module_path, package=base_package)
+        driver_module = await asyncio.to_thread(
+            import_module, module_path, base_package
+        )
 
         # Load the class named 'Device' in the module
-        device_class = getattr(driver_module, 'Device')
-        
+        device_class = getattr(driver_module, "Device")
+
         return device_class
-        
+
     except AttributeError as e:
         # If the 'Device' class is not found in the module, print the error
-        _LOGGER.debug(f"AttributeError: {e} - Class 'Device' not found in {module_path}")
+        _LOGGER.debug(
+            f"AttributeError: {e} - Class 'Device' not found in {module_path}"
+        )
         return None
     except ModuleNotFoundError as e:
         # Handle the case where the module itself can't be found

@@ -1,9 +1,15 @@
-from enum import Enum
 from homeassistant.const import Platform
 
 # Global Constants
 DOMAIN: str = "modbus_devices"
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.NUMBER, Platform.SELECT, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.NUMBER,
+    Platform.SELECT,
+    Platform.SENSOR,
+    Platform.SWITCH,
+]
 
 # Configuration Device Constants
 CONF_NAME: str = "name"

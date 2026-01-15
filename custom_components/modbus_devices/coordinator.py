@@ -1,10 +1,14 @@
 import async_timeout
-import copy
 import datetime as dt
 import logging
 
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, ConfigEntryNotReady, ConfigEntryError
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+    UpdateFailed,
+    ConfigEntryNotReady,
+    ConfigEntryError,
+)
 
 from .devices.helpers import load_device_class
 from .devices.datatypes import ModbusDefaultGroups, ModbusDatapoint
@@ -14,8 +18,18 @@ from .entity import ModbusBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-class ModbusCoordinator(DataUpdateCoordinator):    
-    def __init__(self, hass, device, device_model:str, connection_params, scan_interval, scan_interval_fast, rtu_bus):
+
+class ModbusCoordinator(DataUpdateCoordinator):
+    def __init__(
+        self,
+        hass,
+        device,
+        device_model: str,
+        connection_params,
+        scan_interval,
+        scan_interval_fast,
+        rtu_bus,
+    ):
         """Initialize coordinator parent"""
         super().__init__(
             hass,
@@ -40,9 +54,9 @@ class ModbusCoordinator(DataUpdateCoordinator):
         self._modbusDevice: ModbusDevice | None = None
 
         # Storage for config selection
-        self.config_value_select:ModbusBaseEntity = None
-        self.config_value_number:ModbusBaseEntity = None
-        self.config_value_active:ModbusBaseEntity = None
+        self.config_value_select: ModbusBaseEntity = None
+        self.config_value_number: ModbusBaseEntity = None
+        self.config_value_active: ModbusBaseEntity = None
 
     async def _async_setup(self):
         # Load modbus device driver
@@ -83,9 +97,8 @@ class ModbusCoordinator(DataUpdateCoordinator):
         self._fast_poll_enabled = False
         self.update_interval = dt.timedelta(seconds=self._normal_poll_interval)
 
-
     async def _async_update_data(self):
-        _LOGGER.debug("Coordinator updating data for: %s", self.devicename) 
+        _LOGGER.debug("Coordinator updating data for: %s", self.devicename)
 
         """ Counter for fast polling """
         if self._fast_poll_enabled:
@@ -96,11 +109,11 @@ class ModbusCoordinator(DataUpdateCoordinator):
         """ Fetch data """
         try:
             async with async_timeout.timeout(20):
-                await self._modbusDevice.readData()       
+                await self._modbusDevice.readData()
         except Exception as err:
             _LOGGER.warning("Failed to update %s: %s", self.devicename, err)
             raise UpdateFailed from err
-        
+
         await self._async_update_deviceInfo()
 
     async def _async_update_deviceInfo(self) -> None:
@@ -112,11 +125,11 @@ class ModbusCoordinator(DataUpdateCoordinator):
             sw_version=self._modbusDevice.sw_version,
             serial_number=self._modbusDevice.serial_number,
         )
-        _LOGGER.debug("Updated device data for: %s", self.devicename) 
+        _LOGGER.debug("Updated device data for: %s", self.devicename)
 
     ################################
     ######## Configuration #########
-    ################################   
+    ################################
     async def _swap_config_value_entity(self, datapoint: ModbusDatapoint):
         _LOGGER.debug("Changing CONFIG value entity type")
 
@@ -141,12 +154,18 @@ class ModbusCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("In config select: %s", key)
 
         # Change type of entitiy for config value
-        old_dp = self.config_value_active.modbusDataPoint if self.config_value_active else None
+        old_dp = (
+            self.config_value_active.modbusDataPoint
+            if self.config_value_active
+            else None
+        )
         new_dp = self._modbusDevice.Datapoints[ModbusDefaultGroups.CONFIG][key]
 
         _LOGGER.debug("Dps: %s %s", old_dp, new_dp)
 
-        if old_dp is None or type(old_dp.entity_data) != type(new_dp.entity_data):
+        if old_dp is None or not isinstance(
+            old_dp.entity_data, type(new_dp.entity_data)
+        ):
             _LOGGER.debug("New type!")
             await self._swap_config_value_entity(new_dp)
         try:
@@ -162,13 +181,15 @@ class ModbusCoordinator(DataUpdateCoordinator):
 
     def get_config_options(self):
         options = {}
-        for i, config in enumerate(self._modbusDevice.Datapoints[ModbusDefaultGroups.CONFIG]):
-            options.update({i:config})
+        for i, config in enumerate(
+            self._modbusDevice.Datapoints[ModbusDefaultGroups.CONFIG]
+        ):
+            options.update({i: config})
         return options
 
     ################################
     ######### Read / Write #########
-    ################################   
+    ################################
     def get_value(self, group, key):
         if group in self._modbusDevice.Datapoints:
             if key in self._modbusDevice.Datapoints[group]:
@@ -186,7 +207,14 @@ class ModbusCoordinator(DataUpdateCoordinator):
         try:
             await self._modbusDevice.writeValue(group, key, value)
         except Exception as exc:
-            _LOGGER.error("Failed to write value '%s' to key '%s' in group '%s': %s", value, key, group, exc, exc_info=exc)
+            _LOGGER.error(
+                "Failed to write value '%s' to key '%s' in group '%s': %s",
+                value,
+                key,
+                group,
+                exc,
+                exc_info=exc,
+            )
             raise
 
         self.setFastPollMode()

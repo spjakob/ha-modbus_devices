@@ -1,4 +1,5 @@
 """Support for Grundfos MAGNA3 pumps via Modbus."""
+
 import logging
 
 from ..modbusdevice import ModbusDevice

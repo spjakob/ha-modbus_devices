@@ -1,4 +1,5 @@
 """Support for Eastron SDM630 via Modbus."""
+
 import logging
 
 from ..modbusdevice import ModbusDevice
@@ -36,6 +37,7 @@ GROUP_INPUT_4 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_INPUT_5 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_HOLDING_RESET = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
 GROUP_HOLDING_INFO = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
+
 
 class Device(ModbusDevice):
     """Representation of an Eastron SDM630 Modbus device."""
