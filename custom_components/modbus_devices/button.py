@@ -6,14 +6,20 @@ from .const import DOMAIN
 from .coordinator import ModbusCoordinator
 from .entity import ModbusBaseEntity
 
-from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusDatapoint, EntityDataButton
+from .devices.datatypes import (
+    ModbusGroup,
+    ModbusDefaultGroups,
+    ModbusDatapoint,
+    EntityDataButton,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup button from a config entry created in the integrations UI."""
     # Find coordinator for this device
-    coordinator:ModbusCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: ModbusCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     # Load entities
     ha_entities = []
@@ -21,14 +27,23 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         if group != ModbusDefaultGroups.CONFIG:
             for key, datapoint in datapoints.items():
                 if isinstance(datapoint.entity_data, EntityDataButton):
-                    ha_entities.append(ModbusButtonEntity(coordinator, group, key, datapoint))
+                    ha_entities.append(
+                        ModbusButtonEntity(coordinator, group, key, datapoint)
+                    )
 
     async_add_entities(ha_entities, False)
+
 
 class ModbusButtonEntity(ModbusBaseEntity, ButtonEntity):
     """Representation of a Button."""
 
-    def __init__(self, coordinator, group:ModbusGroup, key:str, modbusDataPoint:ModbusDatapoint):
+    def __init__(
+        self,
+        coordinator,
+        group: ModbusGroup,
+        key: str,
+        modbusDataPoint: ModbusDatapoint,
+    ):
         """Initialize ModbusBaseEntity."""
         super().__init__(coordinator, group, key, modbusDataPoint)
 
@@ -36,10 +51,10 @@ class ModbusButtonEntity(ModbusBaseEntity, ButtonEntity):
         self._attr_device_class = self.modbusDataPoint.entity_data.deviceClass
 
     async def async_press(self) -> None:
-        """ Write value to device """
+        """Write value to device"""
         try:
             await self.coordinator.write_value(self._group, self._key, 1)
-        except Exception as err:
-            _LOGGER.debug("Error writing command: %s %s", self._group, self._key)         
+        except Exception:
+            _LOGGER.debug("Error writing command: %s %s", self._group, self._key)
         finally:
             self.async_schedule_update_ha_state(force_refresh=False)

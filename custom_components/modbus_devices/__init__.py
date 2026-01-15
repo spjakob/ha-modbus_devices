@@ -1,4 +1,5 @@
 """Support for Modbus devices."""
+
 import logging
 
 from functools import partial
@@ -8,7 +9,6 @@ from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from homeassistant.const import CONF_DEVICES
 from .const import (
     DOMAIN,
     PLATFORMS,
@@ -22,14 +22,16 @@ from .const import (
     CONF_SLAVE_ID,
     CONF_SCAN_INTERVAL,
     CONF_SCAN_INTERVAL_FAST,
-    DEVICE_MODE_TCPIP, DEVICE_MODE_RTU
+    DEVICE_MODE_TCPIP,
+    DEVICE_MODE_RTU,
 )
 
 from .coordinator import ModbusCoordinator
 from .devices.connection import TCPConnectionParams, RTUConnectionParams
-from .rtu_bus import RTUBusManager, RTUBusClient
+from .rtu_bus import RTUBusManager, RTUBusClient as RTUBusClient
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up platform from a ConfigEntry."""
@@ -62,12 +64,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         if bus is None:
             # First device on this port → create bus
-            bus = RTUBusManager(hass=hass, port=serial_port, baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0)
+            bus = RTUBusManager(
+                hass=hass,
+                port=serial_port,
+                baudrate=baudrate,
+                bytesize=8,
+                parity="N",
+                stopbits=1,
+                timeout=3.0,
+            )
             rtu_buses[serial_port] = bus
         else:
             # Validate settings
-            if not bus.matches_serial_config(baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0):
-                _LOGGER.error("Serial port %s already in use with different settings", serial_port)
+            if not bus.matches_serial_config(
+                baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0
+            ):
+                _LOGGER.error(
+                    "Serial port %s already in use with different settings", serial_port
+                )
                 return False
 
         bus.attach(entry.entry_id)
@@ -75,7 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     else:
         _LOGGER.error(f"Unsupported device mode: {device_mode}")
-        return False    
+        return False
 
     # Create device
     # Each config entry will have only one device, so we use the entry_id as a
@@ -85,13 +99,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     dev = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.entry_id)},
-        name=name
+        name=name,
     )
 
     # Set up coordinator
-    coordinator = ModbusCoordinator(hass, dev, device_model, connection_params, scan_interval, scan_interval_fast, rtu_bus=rtu_bus)
+    coordinator = ModbusCoordinator(
+        hass,
+        dev,
+        device_model,
+        connection_params,
+        scan_interval,
+        scan_interval_fast,
+        rtu_bus=rtu_bus,
+    )
     hass.data[DOMAIN][entry.entry_id] = coordinator
-    
+
     # Might throw ConfigEntryNotReady, which should cause retry later
     # Or ConfigEntryError, which will cause integration to halt permanently.
     await coordinator.async_config_entry_first_refresh()
@@ -105,9 +127,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     # Register services
-    hass.services.async_register(DOMAIN, "request_update",partial(service_request_update, hass))
-    
+    hass.services.async_register(
+        DOMAIN, "request_update", partial(service_request_update, hass)
+    )
+
     return True
+
 
 # Service-call to update values
 async def service_request_update(hass, call: ServiceCall):
@@ -123,7 +148,7 @@ async def service_request_update(hass, call: ServiceCall):
     if not device_entry:
         _LOGGER.error("No device entry found for device ID %s", device_id)
         return
-    
+
     """Find the coordinator corresponding to the given device ID."""
     for entry_id, coordinator in hass.data[DOMAIN].items():
         if getattr(coordinator, "device_id", None) == device_id:
@@ -132,9 +157,11 @@ async def service_request_update(hass, call: ServiceCall):
 
     _LOGGER.warning("No coordinator found for device ID %s", device_id)
 
+
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug("Updating Modbus Devices entry!")
     await hass.config_entries.async_reload(entry.entry_id)
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
@@ -154,6 +181,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return unload_ok
 
+
 async def async_remove_config_entry_device(
     hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
 ) -> bool:
@@ -171,7 +199,7 @@ async def async_remove_config_entry_device(
         _LOGGER.debug("Removing entity!")
         ent_reg.async_remove(entity_id)
 
-    # Remove device from device registry    
+    # Remove device from device registry
     # dev_reg = dr.async_get(hass)
     # dev_reg.async_remove_device(device_id)
 

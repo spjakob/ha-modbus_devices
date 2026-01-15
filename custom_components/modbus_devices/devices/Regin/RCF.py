@@ -1,4 +1,5 @@
 """Support for Regin RCF fan coil controllers via Modbus."""
+
 import logging
 
 from ..modbusdevice import ModbusDevice
@@ -28,6 +29,7 @@ GROUP_DEVICE_INFO = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
 GROUP_SENSORS = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_CONTROL = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
 
+
 class Device(ModbusDevice):
     """Representation of a Regin RCF Modbus device."""
 
@@ -41,33 +43,24 @@ class Device(ModbusDevice):
             "Software Type": ModbusDatapoint(
                 address=1,
                 entity_data=EntityDataSensor(
-                    enum={0: "RCP", 1: "RC"},
-                    category=EntityCategory.DIAGNOSTIC
-                )
+                    enum={0: "RCP", 1: "RC"}, category=EntityCategory.DIAGNOSTIC
+                ),
             ),
             "Major version": ModbusDatapoint(
                 address=2,
-                entity_data=EntityDataSensor(
-                    category=EntityCategory.DIAGNOSTIC
-                )
+                entity_data=EntityDataSensor(category=EntityCategory.DIAGNOSTIC),
             ),
             "Minor version": ModbusDatapoint(
                 address=3,
-                entity_data=EntityDataSensor(
-                    category=EntityCategory.DIAGNOSTIC
-                )
+                entity_data=EntityDataSensor(category=EntityCategory.DIAGNOSTIC),
             ),
             "Branch version": ModbusDatapoint(
                 address=4,
-                entity_data=EntityDataSensor(
-                    category=EntityCategory.DIAGNOSTIC
-                )
+                entity_data=EntityDataSensor(category=EntityCategory.DIAGNOSTIC),
             ),
             "Revision": ModbusDatapoint(
                 address=5,
-                entity_data=EntityDataSensor(
-                    category=EntityCategory.DIAGNOSTIC
-                )
+                entity_data=EntityDataSensor(category=EntityCategory.DIAGNOSTIC),
             ),
         }
 
@@ -112,8 +105,8 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.TEMPERATURE,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfTemperature.CELSIUS
-                )
+                    units=UnitOfTemperature.CELSIUS,
+                ),
             ),
             "Room temperature external": ModbusDatapoint(
                 address=12,
@@ -121,8 +114,8 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.TEMPERATURE,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfTemperature.CELSIUS
-                )
+                    units=UnitOfTemperature.CELSIUS,
+                ),
             ),
             "Room temperature internal": ModbusDatapoint(
                 address=13,
@@ -130,8 +123,8 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.TEMPERATURE,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfTemperature.CELSIUS
-                )
+                    units=UnitOfTemperature.CELSIUS,
+                ),
             ),
             "Change over temperature": ModbusDatapoint(
                 address=14,
@@ -139,8 +132,8 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.TEMPERATURE,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfTemperature.CELSIUS
-                )
+                    units=UnitOfTemperature.CELSIUS,
+                ),
             ),
             "Controller setpoint": ModbusDatapoint(
                 address=20,
@@ -148,32 +141,29 @@ class Device(ModbusDevice):
                 entity_data=EntityDataSensor(
                     deviceClass=SensorDeviceClass.TEMPERATURE,
                     stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfTemperature.CELSIUS
-                )
+                    units=UnitOfTemperature.CELSIUS,
+                ),
             ),
             "Controller output signal": ModbusDatapoint(
                 address=21,
                 scaling=0.1,
                 entity_data=EntityDataSensor(
-                    stateClass=SensorStateClass.MEASUREMENT,
-                    units=PERCENTAGE
-                )
+                    stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE
+                ),
             ),
             "Heating output signal": ModbusDatapoint(
                 address=22,
                 scaling=0.1,
                 entity_data=EntityDataSensor(
-                    stateClass=SensorStateClass.MEASUREMENT,
-                    units=PERCENTAGE
-                )
+                    stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE
+                ),
             ),
             "Cooling output signal": ModbusDatapoint(
                 address=23,
                 scaling=0.1,
                 entity_data=EntityDataSensor(
-                    stateClass=SensorStateClass.MEASUREMENT,
-                    units=PERCENTAGE
-                )
+                    stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE
+                ),
             ),
             "Supply air temperature": ModbusDatapoint(
                 address=47,
@@ -188,9 +178,8 @@ class Device(ModbusDevice):
                 address=48,
                 scaling=0.1,
                 entity_data=EntityDataSensor(
-                    stateClass=SensorStateClass.MEASUREMENT,
-                    units=PERCENTAGE
-                )
+                    stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE
+                ),
             ),
             "Supply air setpoint": ModbusDatapoint(
                 address=49,
@@ -236,8 +225,8 @@ class Device(ModbusDevice):
                     max_value=10,
                     step=0.1,
                     units=UnitOfTemperature.CELSIUS,
-                    deviceClass=NumberDeviceClass.TEMPERATURE
-                )
+                    deviceClass=NumberDeviceClass.TEMPERATURE,
+                ),
             ),
         }
 
@@ -251,8 +240,8 @@ class Device(ModbusDevice):
                     units=UnitOfTemperature.CELSIUS,
                     min_value=10,
                     max_value=35,
-                    step=0.1
-                )
+                    step=0.1,
+                ),
             ),
             "Change-over Select": ModbusDatapoint(
                 address=13,
@@ -267,40 +256,26 @@ class Device(ModbusDevice):
             "Fan speed 1 output": ModbusDatapoint(
                 address=7,
                 entity_data=EntityDataNumber(
-                    units=PERCENTAGE,
-                    icon="mdi:fan",
-                    min_value=0,
-                    max_value=100,
-                    step=1
-                )
+                    units=PERCENTAGE, icon="mdi:fan", min_value=0, max_value=100, step=1
+                ),
             ),
             "Fan speed 2 output": ModbusDatapoint(
                 address=8,
                 entity_data=EntityDataNumber(
-                    units=PERCENTAGE,
-                    icon="mdi:fan",
-                    min_value=0,
-                    max_value=100,
-                    step=1
-                )
+                    units=PERCENTAGE, icon="mdi:fan", min_value=0, max_value=100, step=1
+                ),
             ),
             "Fan speed 3 output": ModbusDatapoint(
                 address=9,
                 entity_data=EntityDataNumber(
-                    units=PERCENTAGE,
-                    icon="mdi:fan",
-                    min_value=0,
-                    max_value=100,
-                    step=1
-                )
+                    units=PERCENTAGE, icon="mdi:fan", min_value=0, max_value=100, step=1
+                ),
             ),
             "Modbus Slave Address": ModbusDatapoint(
                 address=44,
                 entity_data=EntityDataNumber(
-                    min_value=1,
-                    max_value=247,
-                    category=EntityCategory.DIAGNOSTIC
-                )
+                    min_value=1, max_value=247, category=EntityCategory.DIAGNOSTIC
+                ),
             ),
             "Modbus Parity": ModbusDatapoint(
                 address=45,
@@ -317,16 +292,14 @@ class Device(ModbusDevice):
             "Modbus Char Timeout": ModbusDatapoint(
                 address=46,
                 entity_data=EntityDataNumber(
-                    units=UnitOfTime.MILLISECONDS,
-                    category=EntityCategory.DIAGNOSTIC
-                )
+                    units=UnitOfTime.MILLISECONDS, category=EntityCategory.DIAGNOSTIC
+                ),
             ),
             "Modbus Answer Delay": ModbusDatapoint(
                 address=47,
                 entity_data=EntityDataNumber(
-                    units=UnitOfTime.MILLISECONDS,
-                    category=EntityCategory.DIAGNOSTIC
-                )
+                    units=UnitOfTime.MILLISECONDS, category=EntityCategory.DIAGNOSTIC
+                ),
             ),
             "Display Backlight Low": ModbusDatapoint(
                 address=48,
@@ -334,8 +307,8 @@ class Device(ModbusDevice):
                     min_value=0,
                     max_value=100,
                     units=PERCENTAGE,
-                    category=EntityCategory.CONFIG
-                )
+                    category=EntityCategory.CONFIG,
+                ),
             ),
             "Display Backlight High": ModbusDatapoint(
                 address=49,
@@ -343,16 +316,14 @@ class Device(ModbusDevice):
                     min_value=0,
                     max_value=100,
                     units=PERCENTAGE,
-                    category=EntityCategory.CONFIG
-                )
+                    category=EntityCategory.CONFIG,
+                ),
             ),
             "Display Contrast": ModbusDatapoint(
                 address=50,
                 entity_data=EntityDataNumber(
-                    min_value=0,
-                    max_value=15,
-                    category=EntityCategory.CONFIG
-                )
+                    min_value=0, max_value=15, category=EntityCategory.CONFIG
+                ),
             ),
             "Display View Mode": ModbusDatapoint(
                 address=51,
@@ -376,4 +347,4 @@ class Device(ModbusDevice):
         c = self.Datapoints[GROUP_DEVICE_INFO]["Minor version"].value
         d = self.Datapoints[GROUP_DEVICE_INFO]["Branch version"].value
         e = self.Datapoints[GROUP_DEVICE_INFO]["Revision"].value
-        self.sw_version = '{}{}.{}.{}-{}'.format(a,b,c,d,e)
+        self.sw_version = "{}{}.{}.{}-{}".format(a, b, c, d, e)

@@ -6,14 +6,20 @@ from .const import DOMAIN
 from .coordinator import ModbusCoordinator
 from .entity import ModbusBaseEntity
 
-from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusDatapoint, EntityDataBinarySensor
+from .devices.datatypes import (
+    ModbusGroup,
+    ModbusDefaultGroups,
+    ModbusDatapoint,
+    EntityDataBinarySensor,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup sensor from a config entry created in the integrations UI."""
     # Find coordinator for this device
-    coordinator:ModbusCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: ModbusCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     # Load entities
     ha_entities = []
@@ -22,14 +28,23 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         if group != ModbusDefaultGroups.CONFIG:
             for key, datapoint in datapoints.items():
                 if isinstance(datapoint.entity_data, EntityDataBinarySensor):
-                    ha_entities.append(ModbusBinarySensorEntity(coordinator, group, key, datapoint))
+                    ha_entities.append(
+                        ModbusBinarySensorEntity(coordinator, group, key, datapoint)
+                    )
 
     async_add_entities(ha_entities, False)
+
 
 class ModbusBinarySensorEntity(ModbusBaseEntity, BinarySensorEntity):
     """Representation of a Sensor."""
 
-    def __init__(self, coordinator, group:ModbusGroup, key:str, modbusDataPoint:ModbusDatapoint):
+    def __init__(
+        self,
+        coordinator,
+        group: ModbusGroup,
+        key: str,
+        modbusDataPoint: ModbusDatapoint,
+    ):
         """Initialize ModbusBaseEntity."""
         super().__init__(coordinator, group, key, modbusDataPoint)
 

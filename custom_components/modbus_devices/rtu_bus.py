@@ -12,7 +12,17 @@ _LOGGER = logging.getLogger(__name__)
 class RTUBusManager:
     """Owns a single Modbus RTU serial port and serializes all access."""
 
-    def __init__(self, *, hass, port: str, baudrate: int, bytesize: int, parity: str, stopbits: int, timeout: float) -> None:
+    def __init__(
+        self,
+        *,
+        hass,
+        port: str,
+        baudrate: int,
+        bytesize: int,
+        parity: str,
+        stopbits: int,
+        timeout: float,
+    ) -> None:
         self.hass = hass
         self.port = port
 
@@ -80,8 +90,16 @@ class RTUBusManager:
     # Validation
     # ------------------------------------------------------------------
 
-    def matches_serial_config(self, *, baudrate: int, bytesize: int, parity: str, stopbits: int, timeout: float) -> bool:
-        return self._serial_cfg == { 
+    def matches_serial_config(
+        self,
+        *,
+        baudrate: int,
+        bytesize: int,
+        parity: str,
+        stopbits: int,
+        timeout: float,
+    ) -> bool:
+        return self._serial_cfg == {
             "baudrate": baudrate,
             "bytesize": bytesize,
             "parity": parity,

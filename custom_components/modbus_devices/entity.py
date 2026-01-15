@@ -1,4 +1,5 @@
 """Base entity class for Modbus Devices integration."""
+
 import logging
 
 from homeassistant.helpers import entity_registry as er
@@ -7,10 +8,17 @@ from .devices.datatypes import ModbusGroup, ModbusDatapoint
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class ModbusBaseEntity(CoordinatorEntity):
     """Modbus base entity class."""
 
-    def __init__(self, coordinator, group:ModbusGroup, key:str, modbusDataPoint:ModbusDatapoint):
+    def __init__(
+        self,
+        coordinator,
+        group: ModbusGroup,
+        key: str,
+        modbusDataPoint: ModbusDatapoint,
+    ):
         """Pass coordinator to CoordinatorEntity."""
         super().__init__(coordinator)
 
@@ -22,8 +30,10 @@ class ModbusBaseEntity(CoordinatorEntity):
         self._attr_device_info = {
             "identifiers": self.coordinator.identifiers,
         }
-        self._attr_entity_registry_enabled_default = modbusDataPoint.entity_data.enabledDefault
-        
+        self._attr_entity_registry_enabled_default = (
+            modbusDataPoint.entity_data.enabledDefault
+        )
+
         """Store this entities keys."""
         self._group = group
         self._key = key
@@ -47,7 +57,9 @@ class ModbusBaseEntity(CoordinatorEntity):
 
         if visible:
             # Restore original device_id
-            ent_reg.async_update_entity(self.entity_id, device_id=self.coordinator.device_id)
+            ent_reg.async_update_entity(
+                self.entity_id, device_id=self.coordinator.device_id
+            )
         else:
             # Detach from device
             ent_reg.async_update_entity(self.entity_id, device_id=None)
