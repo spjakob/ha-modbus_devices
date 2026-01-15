@@ -11,7 +11,7 @@ from .const import ByteOrder, WordOrder, ModbusMode, ModbusPollMode
 from .datatypes import ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
 from .datatypes import EntityDataSelect, EntityDataNumber, EntityDataSensor
 from ..rtu_bus import RTUBusManager, RTUBusClient
-from ..statistics import STATS_MANAGER, CountingTcpFramer
+from ..statistics import STATS_MANAGER, CountingSocketFramer
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class ModbusDevice():
     def __init__(self, connection_params: ConnectionParams, rtu_bus: RTUBusManager):
         if isinstance(connection_params, TCPConnectionParams):
             endpoint = f"{connection_params.ip}:{connection_params.port}"
-            framer = CountingTcpFramer(stats_manager=STATS_MANAGER, endpoint=endpoint)
+            framer = CountingSocketFramer(stats_manager=STATS_MANAGER, endpoint=endpoint)
             self._client = AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port, framer=framer)
         elif isinstance(connection_params, RTUConnectionParams):
             self._client = RTUBusClient(rtu_bus)
@@ -131,7 +131,7 @@ class ModbusDevice():
         )
 
         method = self._get_read_method(group.mode)    
-        response = await method(address=start_addr, count=n_reg, device_id=self._slave_id)
+        response = await method(address=start_addr, count=n_reg, unit=self._slave_id)
 
         # Handle Modbus errors
         if response.isError():
@@ -164,7 +164,7 @@ class ModbusDevice():
         register_count = dp.register_count
 
         method = self._get_read_method(group.mode) 
-        response = await method(address=dp.address, count=register_count, device_id=self._slave_id)
+        response = await method(address=dp.address, count=register_count, unit=self._slave_id)
 
         # Handle Modbus errors
         if response.isError():
@@ -213,13 +213,13 @@ class ModbusDevice():
             response = await method(
                 address=address,
                 value=registers[0],
-                device_id=self._slave_id,
+                unit=self._slave_id,
             )
         else:
             response = await method(
                 address=address,
                 values=registers,
-                device_id=self._slave_id,
+                unit=self._slave_id,
             )
 
         if response.isError():
