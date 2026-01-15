@@ -5,14 +5,14 @@ import logging
 from typing import Any, Callable
 
 from pymodbus.client import AsyncModbusSerialClient
-from pymodbus.framer.rtu import ModbusRtuFramer
+from pymodbus.framer.rtu import FramerRTU
 
 from .statistics import STATS_MANAGER, StatisticsManager
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class CountingRtuFramer(ModbusRtuFramer):
+class CountingRtuFramer(FramerRTU):
     """A framer that counts sent and received bytes."""
 
     def __init__(self, client: AsyncModbusSerialClient | None = None, *, stats_manager: StatisticsManager, endpoint: str) -> None:
