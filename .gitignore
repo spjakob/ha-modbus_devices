@@ -1,3 +1,4 @@
 # Python bytecode
 *.pyc
 __pycache__/
+.venv/
