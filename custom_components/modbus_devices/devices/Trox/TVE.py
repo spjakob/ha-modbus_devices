@@ -39,8 +39,6 @@ class Device(ModbusDevice):
         self.Datapoints[GROUP_DEVICE_INFO] = {
             "FW": ModbusDatapoint(address=103),
             "Status": ModbusDatapoint(address=104),
-            "Q Nom": ModbusDatapoint(address=122, entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.VOLUME_FLOW_RATE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
-            "Unit Setting": ModbusDatapoint(address=201)
         }
 
         # CONFIGURATION - Read/Write
@@ -51,8 +49,9 @@ class Device(ModbusDevice):
             "109 Bus Timeout": ModbusDatapoint(address=109, entity_data=EntityDataNumber(units=UnitOfTime.SECONDS, min_value=0, max_value=100, step=1)),
             "120 Q Min": ModbusDatapoint(address=120, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
             "121 Q Max": ModbusDatapoint(address=121, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.VOLUME_FLOW_RATE, units=UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR, icon="mdi:weather-windy")),
+            "122 Interface Mode": ModbusDatapoint(address=122, entity_data=EntityDataSelect(options={0: "Modbus RTU", 1: "Analogue", 2: "Hybrid"})),
             "130 Modbus Address": ModbusDatapoint(address=130),
-            "201 Volume Flow Unit": ModbusDatapoint(address=201),
+            "201 Volume Flow Unit": ModbusDatapoint(address=201, entity_data=EntityDataSelect(options={0: "L/s", 1: "m³/h", 6: "cfm"})),
             "231 Signal Voltage": ModbusDatapoint(address=231, entity_data=EntityDataSelect(options={0: "0-10V", 1: "2-10V"})),
             "568 Modbus Parameters": ModbusDatapoint(address=568),
             "569 Modbus Response Delay": ModbusDatapoint(address=569, entity_data=EntityDataNumber(units=UnitOfTime.MILLISECONDS, min_value=0, max_value=255, step=1)),
@@ -67,7 +66,7 @@ class Device(ModbusDevice):
     def onAfterFirstRead(self):
         # We need to adjust scaling of flow values depending on a configuration value
         flowUnits = UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR
-        match self.Datapoints[GROUP_DEVICE_INFO]["Unit Setting"].value:
+        match self.Datapoints[ModbusDefaultGroups.CONFIG]["201 Volume Flow Unit"].value:
             case 0:
                 flowUnits = UnitOfVolumeFlowRate.LITERS_PER_SECOND
             case 1:
@@ -75,7 +74,6 @@ class Device(ModbusDevice):
             case 6:
                 flowUnits = UnitOfVolumeFlowRate.CUBIC_FEET_PER_MINUTE
         self.Datapoints[GROUP_0]["Flowrate Actual"].entity_data.units = flowUnits
-        self.Datapoints[GROUP_DEVICE_INFO]["Q Nom"].entity_data.units = flowUnits
         self.Datapoints[ModbusDefaultGroups.CONFIG]["120 Q Min"].entity_data.units = flowUnits
         self.Datapoints[ModbusDefaultGroups.CONFIG]["121 Q Max"].entity_data.units = flowUnits
 
