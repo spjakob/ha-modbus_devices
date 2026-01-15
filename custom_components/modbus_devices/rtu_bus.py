@@ -5,7 +5,7 @@ import logging
 from typing import Any, Callable
 
 from pymodbus.client import AsyncModbusSerialClient
-from pymodbus.framer.rtu_framer import ModbusRtuFramer
+from pymodbus.framer import ModbusRtuFramer
 
 from .statistics import STATS_MANAGER, StatisticsManager
 

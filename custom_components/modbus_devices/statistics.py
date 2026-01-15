@@ -6,7 +6,7 @@ from collections import defaultdict
 from typing import Any, Callable
 
 from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.framer.tcp_framer import ModbusTcpFramer
+from pymodbus.framer import ModbusTcpFramer
 
 _LOGGER = logging.getLogger(__name__)
 
