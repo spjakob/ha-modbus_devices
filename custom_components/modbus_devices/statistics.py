@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import Any, Callable
 
 from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.factory import ClientDecoder
 from pymodbus.framer.tcp_framer import ModbusTcpFramer
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,9 +45,9 @@ STATS_MANAGER = StatisticsManager()
 class CountingTcpFramer(ModbusTcpFramer):
     """A framer that counts sent and received bytes for TCP."""
 
-    def __init__(self, decoder: ClientDecoder, client: AsyncModbusTcpClient | None = None, *, stats_manager: StatisticsManager, endpoint: str) -> None:
+    def __init__(self, client: AsyncModbusTcpClient | None = None, *, stats_manager: StatisticsManager, endpoint: str) -> None:
         """Initialize the counting framer."""
-        super().__init__(decoder, client)
+        super().__init__(client)
         self._stats_manager = stats_manager
         self._endpoint = endpoint
 
