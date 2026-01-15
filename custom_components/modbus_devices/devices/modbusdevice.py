@@ -11,6 +11,7 @@ from .const import ByteOrder, WordOrder, ModbusMode, ModbusPollMode
 from .datatypes import ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
 from .datatypes import EntityDataSelect, EntityDataNumber, EntityDataSensor
 from ..rtu_bus import RTUBusManager, RTUBusClient
+from ..tcp_bus import TCPBusManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,14 +26,25 @@ class ModbusDevice():
     byte_order = ByteOrder.MSB
     word_order = WordOrder.NORMAL
 
-    def __init__(self, connection_params: ConnectionParams, rtu_bus: RTUBusManager):
+    def __init__(self, connection_params: ConnectionParams, rtu_bus: RTUBusManager = None, tcp_bus: TCPBusManager = None):
+        self._bus_manager = None
+
         if isinstance(connection_params, TCPConnectionParams):
             self._client = AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port)
+            self._bus_manager = tcp_bus
         elif isinstance(connection_params, RTUConnectionParams):
             self._client = RTUBusClient(rtu_bus)
+            self._bus_manager = rtu_bus
         else:
             raise ValueError("Unsupported connection parameters")
+
         self._slave_id = connection_params.slave_id
+
+        # Device local statistics
+        self.device_tx_packets = 0
+        self.device_rx_packets = 0
+        self.device_tx_bits = 0
+        self.device_rx_bits = 0
 
         self.Datapoints: dict[ModbusGroup, dict[str, ModbusDatapoint]] = {}
         self.loadDatapoints()
@@ -81,6 +93,76 @@ class ModbusDevice():
         pass
     def onAfterFirstRead(self):
         pass
+
+    """ ******************************************************* """
+    """ ************* STATISTICS HELPER FUNCTIONS ************* """
+    """ ******************************************************* """
+    def _update_counters(self, tx_bytes: int, rx_bytes: int):
+        """Update both local and shared bus counters."""
+        # Update local
+        self.device_tx_packets += 1
+        self.device_rx_packets += 1
+        self.device_tx_bits += tx_bytes * 8
+        self.device_rx_bits += rx_bytes * 8
+
+        # Update shared bus
+        if self._bus_manager:
+            self._bus_manager.update_counters(tx_bytes, rx_bytes)
+
+    def _calculate_read_overhead(self, count: int, mode: ModbusMode) -> tuple[int, int]:
+        """
+        Calculate approximate bytes for Read Request and Response.
+        Returns (tx_bytes, rx_bytes).
+        """
+        is_rtu = isinstance(self._bus_manager, RTUBusManager)
+
+        # RTU: Addr(1) + Func(1) + Data(N) + CRC(2)
+        # TCP: Trans(2) + Proto(2) + Len(2) + Unit(1) + Func(1) + Data(N)
+        # Difference: RTU overhead = 4, TCP overhead = 8 (header)
+
+        overhead = 4 if is_rtu else 8
+
+        # Request: overhead + 4 bytes (Address(2) + Count(2))
+        tx_bytes = overhead + 4
+
+        # Response: overhead + 1 byte (ByteCount) + Data
+        if mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS):
+            data_bytes = (count + 7) // 8
+        else:
+            data_bytes = count * 2
+
+        rx_bytes = overhead + 1 + data_bytes
+
+        return tx_bytes, rx_bytes
+
+    def _calculate_write_overhead(self, count: int, mode: ModbusMode) -> tuple[int, int]:
+        """
+        Calculate approximate bytes for Write Request and Response.
+        Returns (tx_bytes, rx_bytes).
+        """
+        is_rtu = isinstance(self._bus_manager, RTUBusManager)
+        overhead = 4 if is_rtu else 8
+
+        if count == 1:
+            # Write Single Register / Coil
+            # Req: Overhead + Address(2) + Value(2) = Overhead + 4
+            # Res: Overhead + Address(2) + Value(2) = Overhead + 4
+            tx_bytes = overhead + 4
+            rx_bytes = overhead + 4
+        else:
+            # Write Multiple
+            # Req: Overhead + Address(2) + Count(2) + ByteCount(1) + Data(N)
+            if mode == ModbusMode.COILS:
+                data_bytes = (count + 7) // 8
+            else:
+                data_bytes = count * 2
+
+            tx_bytes = overhead + 5 + data_bytes
+
+            # Res: Overhead + Address(2) + Count(2) = Overhead + 4
+            rx_bytes = overhead + 4
+
+        return tx_bytes, rx_bytes
 
     """ ******************************************************* """
     """ *********** EXTERNAL CALL TO READ ALL DATA ************ """
@@ -134,6 +216,10 @@ class ModbusDevice():
         if response.isError():
             raise ModbusException(f"Error reading group {group}: {response}")
 
+        # Update statistics
+        tx, rx = self._calculate_read_overhead(n_reg, group.mode)
+        self._update_counters(tx, rx)
+
         data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
         _LOGGER.debug("Read data from address: %s - %s", start_addr, data)
 
@@ -166,6 +252,10 @@ class ModbusDevice():
         # Handle Modbus errors
         if response.isError():
             raise ModbusException(f"Error reading value for key '{key}': {response}")
+
+        # Update statistics
+        tx, rx = self._calculate_read_overhead(register_count, group.mode)
+        self._update_counters(tx, rx)
 
         data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
         _LOGGER.debug("Read data: %s", data)
@@ -221,6 +311,10 @@ class ModbusDevice():
 
         if response.isError():
             raise ModbusException(f"Failed to write value for key '{key}': {response}")
+
+        # Update statistics
+        tx, rx = self._calculate_write_overhead(register_count, group.mode)
+        self._update_counters(tx, rx)
 
         # Update the cached value
         datapoint.value = value

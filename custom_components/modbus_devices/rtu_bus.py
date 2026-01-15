@@ -28,6 +28,13 @@ class RTUBusManager:
         self._client: AsyncModbusSerialClient | None = None
         self._users: set[str] = set()
 
+        # Statistics
+        self.tx_packets = 0
+        self.rx_packets = 0
+        self.tx_bits = 0
+        self.rx_bits = 0
+        self.sensors_created = False
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -88,6 +95,16 @@ class RTUBusManager:
             "stopbits": stopbits,
             "timeout": timeout,
         }
+
+    # ------------------------------------------------------------------
+    # Statistics
+    # ------------------------------------------------------------------
+    def update_counters(self, tx_bytes: int, rx_bytes: int) -> None:
+        """Update the shared bus counters."""
+        self.tx_packets += 1
+        self.rx_packets += 1
+        self.tx_bits += tx_bytes * 8
+        self.rx_bits += rx_bytes * 8
 
     # ------------------------------------------------------------------
     # Internal execution helper

@@ -28,6 +28,7 @@ from .const import (
 from .coordinator import ModbusCoordinator
 from .devices.connection import TCPConnectionParams, RTUConnectionParams
 from .rtu_bus import RTUBusManager, RTUBusClient
+from .tcp_bus import TCPBusManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,12 +46,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     scan_interval_fast = entry.data[CONF_SCAN_INTERVAL_FAST]
 
     rtu_bus = None
+    tcp_bus = None
 
     if device_mode == DEVICE_MODE_TCPIP:
         ip = entry.data[CONF_IP]
         port = entry.data[CONF_PORT]
         slave_id = entry.data[CONF_SLAVE_ID]
         connection_params = TCPConnectionParams(ip, port, slave_id)
+
+        # ----- TCP bus setup (for stats) -----
+        tcp_buses = hass.data.setdefault(DOMAIN, {}).setdefault("tcp_buses", {})
+        bus_id = f"{ip}:{port}"
+        bus = tcp_buses.get(bus_id)
+
+        if bus is None:
+            # First device on this endpoint -> create bus
+            bus = TCPBusManager(hass=hass, host=ip, port=port)
+            tcp_buses[bus_id] = bus
+
+        bus.attach(entry.entry_id)
+        tcp_bus = bus
+
     elif device_mode == DEVICE_MODE_RTU:
         serial_port = entry.data[CONF_SERIAL_PORT]
         baudrate = entry.data[CONF_SERIAL_BAUD]
@@ -89,7 +105,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Set up coordinator
-    coordinator = ModbusCoordinator(hass, dev, device_model, connection_params, scan_interval, scan_interval_fast, rtu_bus=rtu_bus)
+    coordinator = ModbusCoordinator(
+        hass,
+        dev,
+        device_model,
+        connection_params,
+        scan_interval,
+        scan_interval_fast,
+        rtu_bus=rtu_bus,
+        tcp_bus=tcp_bus
+    )
     hass.data[DOMAIN][entry.entry_id] = coordinator
     
     # Might throw ConfigEntryNotReady, which should cause retry later
@@ -147,6 +172,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Close coordinator + devices
         coordinator = hass.data[DOMAIN].get(entry.entry_id)
         if coordinator:
+            # Detach from RTU/TCP bus managers
+            if coordinator.rtu_bus:
+                await coordinator.rtu_bus.detach(entry.entry_id)
+            if coordinator.tcp_bus:
+                bus_id = f"{coordinator.tcp_bus.host}:{coordinator.tcp_bus.port}"
+                if coordinator.tcp_bus.detach(entry.entry_id):
+                    # Last user detached, remove from global registry
+                    hass.data[DOMAIN].get("tcp_buses", {}).pop(bus_id, None)
+
             coordinator.close()
 
         # Remove entry data
