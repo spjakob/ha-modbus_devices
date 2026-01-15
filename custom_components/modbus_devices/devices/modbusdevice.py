@@ -53,16 +53,21 @@ class ModbusDevice():
 
     def loadConfigUI(self):
         # Ensure default groups exist
-        self.Datapoints.setdefault(ModbusDefaultGroups.CONFIG, {})
-        self.Datapoints.setdefault(ModbusDefaultGroups.UI, {})
+        config_group = self.Datapoints.setdefault(ModbusDefaultGroups.CONFIG, {})
+        ui_group = self.Datapoints.setdefault(ModbusDefaultGroups.UI, {})
 
-        # Add Config UI if we have config values
-        if self.Datapoints[ModbusDefaultGroups.CONFIG]:
-            self.Datapoints[ModbusDefaultGroups.UI] = {
-                "Config Selection": ModbusDatapoint(entity_data=EntityDataSelect(category=EntityCategory.CONFIG)),
-                "Config Value Number": ModbusDatapoint(entity_data=EntityDataNumber(category=EntityCategory.CONFIG)),
-                "Config Value Select": ModbusDatapoint(entity_data=EntityDataSelect(category=EntityCategory.CONFIG)),
-            }
+        if not config_group: return  # Nothing to do if CONFIG is empty
+
+        # Check if CONFIG group has any number or select datapoints
+        has_number = any(isinstance(dp.entity_data, EntityDataNumber) for dp in config_group.values())
+        has_select = any(isinstance(dp.entity_data, EntityDataSelect) for dp in config_group.values())
+
+        if not (has_number or has_select): return   # No relevant datapoints, nothing to add
+
+        # Add the selector and any required value displays
+        ui_group["Config Selection"] = ModbusDatapoint(entity_data=EntityDataSelect(category=EntityCategory.CONFIG))
+        ui_group.update({"Config Value Select": ModbusDatapoint(entity_data=EntityDataSelect(category=EntityCategory.CONFIG))} if has_select else {})
+        ui_group.update({"Config Value Number": ModbusDatapoint(entity_data=EntityDataNumber(category=EntityCategory.CONFIG))} if has_number else {})
 
     def loadDatapoints(self):
         pass
@@ -109,11 +114,11 @@ class ModbusDevice():
         MAX_REGISTERS_PER_READ = 125
 
         addresses = [
-            (dp.address, dp.length)
+            (dp.address, dp.register_count)
             for dp in self.Datapoints[group].values()
         ]
         start_addr = min(addr for addr, _ in addresses)
-        end_addr = max(addr + length for addr, length in addresses)
+        end_addr = max(addr + register_count for addr, register_count in addresses)
         n_reg = end_addr - start_addr
 
         if n_reg > MAX_REGISTERS_PER_READ:
@@ -129,18 +134,18 @@ class ModbusDevice():
         if response.isError():
             raise ModbusException(f"Error reading group {group}: {response}")
 
-        _LOGGER.debug("Read data from address: %s - %s", start_addr, response.registers)
+        data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
+        _LOGGER.debug("Read data from address: %s - %s", start_addr, data)
 
         # Process the registers and update data points
-
         for name, dp in self.Datapoints[group].items():
             offset = dp.address - start_addr
-            registers = response.registers[offset:offset + dp.length]
+            registers = data[offset:offset + dp.register_count]
 
             try:
                 dp.from_modbus(registers, self.byte_order, self.word_order)
             except Exception as exc:
-                _LOGGER.warning("Failed to decode datapoint %s in group %s (addr=%s len=%s raw=%s)", name, group, dp.address, dp.length, registers, exc_info=exc)
+                _LOGGER.warning("Failed to decode datapoint %s in group %s (addr=%s len=%s raw=%s)", name, group, dp.address, dp.register_count, registers, exc_info=exc)
                 raise
 
     """ ******************************************************* """
@@ -153,22 +158,23 @@ class ModbusDevice():
             raise KeyError(f"Key '{key}' not found in group '{group}'")
 
         dp = self.Datapoints[group][key]
-        length = dp.length
+        register_count = dp.register_count
 
         method = self._get_read_method(group.mode) 
-        response = await method(address=dp.address, count=length, device_id=self._slave_id)
+        response = await method(address=dp.address, count=register_count, device_id=self._slave_id)
 
         # Handle Modbus errors
         if response.isError():
             raise ModbusException(f"Error reading value for key '{key}': {response}")
 
-        _LOGGER.debug("Read data: %s", response.registers)
-
-        registers = response.registers[:length]
+        data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
+        _LOGGER.debug("Read data: %s", data)
+        registers = data[:register_count]
+        
         try:
             dp.from_modbus(registers, self.byte_order, self.word_order)
         except Exception as exc:
-            _LOGGER.warning("Failed to decode datapoint %s in group %s (addr=%s len=%s raw=%s)", key, group, dp.address, dp.length, registers, exc_info=exc)
+            _LOGGER.warning("Failed to decode datapoint %s in group %s (addr=%s len=%s raw=%s)", key, group, dp.address, dp.register_count, registers, exc_info=exc)
             raise
 
         return dp.value
@@ -183,29 +189,35 @@ class ModbusDevice():
             raise KeyError(f"Key '{key}' not found in group '{group}'")
 
         datapoint = self.Datapoints[group][key]
-        length = datapoint.length
-        if length > 2:
-            raise ValueError(f"Unsupported register length: {length}. Only 1 or 2 registers are supported.")
+        register_count = datapoint.register_count
+        if register_count > 2:
+            raise ValueError(f"Unsupported register count: {register_count}. Only 1 or 2 registers are supported.")
 
         # Get value as modbus registers
         registers = datapoint.to_modbus(value, self.byte_order, self.word_order)
 
         # Write the registers
         address = datapoint.address
-        slave = self._slave_id
 
         if group.mode == ModbusMode.COILS:
-            method = self._client.write_coil if length == 1 else self._client.write_coils
+            method = self._client.write_coil if register_count == 1 else self._client.write_coils
         elif group.mode == ModbusMode.HOLDING:
-            method = self._client.write_register if length == 1 else self._client.write_registers
+            method = self._client.write_register if register_count == 1 else self._client.write_registers
         else:
             raise ModbusException(f"Write Value: Unsupported Modbus mode {group.mode!r} for group {group!r}")
 
-        response = await method(
-            address=address,
-            value=registers[0] if length == 1 else registers,
-            device_id=slave,
-        )
+        if register_count == 1:
+            response = await method(
+                address=address,
+                value=registers[0],
+                device_id=self._slave_id,
+            )
+        else:
+            response = await method(
+                address=address,
+                values=registers,
+                device_id=self._slave_id,
+            )
 
         if response.isError():
             raise ModbusException(f"Failed to write value for key '{key}': {response}")

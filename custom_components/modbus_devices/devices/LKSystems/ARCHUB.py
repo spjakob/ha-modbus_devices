@@ -29,7 +29,7 @@ class Device(ModbusDevice):
     def loadDatapoints(self):
         # DEVICE_INFO - Read-only
         self.Datapoints[GROUP_DEVICE_INFO] = {
-            "Serial Number": ModbusDatapoint(address=0, length=4, type='uint'),     # 4 registers for a 64-bit value
+            "Serial Number": ModbusDatapoint(address=0, register_count=4, type='uint'),     # 4 registers for a 64-bit value
             "Software Version Major": ModbusDatapoint(address=4, type='uint'),
             "Software Version Minor": ModbusDatapoint(address=5, type='uint'),
             "Software Version Micro": ModbusDatapoint(address=6, type='uint'),
@@ -119,7 +119,7 @@ class Device(ModbusDevice):
                     address=base_register + 3,
                     entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.SIGNAL_STRENGTH, stateClass=SensorStateClass.MEASUREMENT, units=SIGNAL_STRENGTH_DECIBELS_MILLIWATT)),
                 f"Zone {i} Thermostat Address Raw": ModbusDatapoint(
-                    address=base_register + 4, length=3, type='uint'),
+                    address=base_register + 4, register_count=3, type='uint'),
                 f"Zone {i} Connected Actuators": ModbusDatapoint(
                     address=base_register + 7, type='uint') # Corrected from +6 to +7
             }

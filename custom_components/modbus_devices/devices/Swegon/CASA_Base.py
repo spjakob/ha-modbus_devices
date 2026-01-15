@@ -57,8 +57,8 @@ class Device(ModbusDevice):
             "FW Build": ModbusDatapoint(address=6002),
             "Par Maj": ModbusDatapoint(address=6003),
             "Par Min": ModbusDatapoint(address=6004),
-            "Model Name": ModbusDatapoint(address=6007, length=15, type=ModbusDataType.STRING),        # 15 registers
-            "Serial Number": ModbusDatapoint(address=6023, length=24, type=ModbusDataType.STRING),     # 24 registers
+            "Model Name": ModbusDatapoint(address=6007, register_count=15, type=ModbusDataType.STRING1),        # 15 registers, 1 char per reg
+            "Serial Number": ModbusDatapoint(address=6023, register_count=24, type=ModbusDataType.STRING1),     # 24 registers, 1 char per reg
         }
 
         # ALARMS - Read-only
@@ -161,6 +161,7 @@ class Device(ModbusDevice):
             "Home Exhaust Speed": ModbusDatapoint(address=5304, entity_data=EntityDataNumber(units=PERCENTAGE, min_value=20, max_value=100, step=1)),
             "Boost Supply Speed": ModbusDatapoint(address=5305, entity_data=EntityDataNumber(units=PERCENTAGE, min_value=20, max_value=100, step=1)),
             "Boost Exhaust Speed": ModbusDatapoint(address=5306, entity_data=EntityDataNumber(units=PERCENTAGE, min_value=20, max_value=100, step=1)),
+            "Operating Mode": ModbusDatapoint(address=5000, entity_data=EntityDataSelect(options={0: "Stopped", 1: "Away", 2: "Home", 3: "Boost", 4: "Travel"})),
         }
 
         # UI datapoints that are calculated and not read directly over modbus
