@@ -26,6 +26,7 @@ from .const import (
 )
 
 from .coordinator import ModbusCoordinator
+from .bus_coordinator import BusCoordinator
 from .devices.connection import TCPConnectionParams, RTUConnectionParams
 from .rtu_bus import RTUBusManager, RTUBusClient
 
@@ -51,19 +52,55 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         port = entry.data[CONF_PORT]
         slave_id = entry.data[CONF_SLAVE_ID]
         connection_params = TCPConnectionParams(ip, port, slave_id)
+
+        # --- TCP bus setup ---
+        endpoint = f"{ip}:{port}"
+        domain_data = hass.data.setdefault(DOMAIN, {})
+        bus_coordinators = domain_data.setdefault("bus_coordinators", {})
+        if endpoint not in bus_coordinators:
+            # First device on this endpoint -> create bus device and coordinator
+            device_registry = dr.async_get(hass)
+            bus_device = device_registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, f"bus_{endpoint}")},
+                name=f"Modbus TCP Gateway ({endpoint})",
+                model="Modbus TCP Gateway",
+                manufacturer="Modbus Devices Integration"
+            )
+            device_info = {"identifiers": {(DOMAIN, bus_device.id)}}
+            coordinator = BusCoordinator(hass, endpoint, device_info=device_info)
+            bus_coordinators[endpoint] = coordinator
+            await coordinator.async_config_entry_first_refresh()
+
     elif device_mode == DEVICE_MODE_RTU:
         serial_port = entry.data[CONF_SERIAL_PORT]
         baudrate = entry.data[CONF_SERIAL_BAUD]
         connection_params = RTUConnectionParams(serial_port, baudrate)
 
         # ----- RTU bus setup -----
-        rtu_buses = hass.data.setdefault(DOMAIN, {}).setdefault("rtu_buses", {})
+        domain_data = hass.data.setdefault(DOMAIN, {})
+        rtu_buses = domain_data.setdefault("rtu_buses", {})
         bus = rtu_buses.get(serial_port)
 
         if bus is None:
             # First device on this port → create bus
             bus = RTUBusManager(hass=hass, port=serial_port, baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0)
             rtu_buses[serial_port] = bus
+
+            # Create bus device and coordinator
+            device_registry = dr.async_get(hass)
+            bus_device = device_registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, f"bus_{serial_port}")},
+                name=f"Modbus RTU Bus ({serial_port})",
+                model="Modbus RTU Bus Gateway",
+                manufacturer="Modbus Devices Integration"
+            )
+            bus_coordinators = domain_data.setdefault("bus_coordinators", {})
+            device_info = {"identifiers": {(DOMAIN, bus_device.id)}}
+            coordinator = BusCoordinator(hass, serial_port, device_info=device_info)
+            bus_coordinators[serial_port] = coordinator
+            await coordinator.async_config_entry_first_refresh()
         else:
             # Validate settings
             if not bus.matches_serial_config(baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0):

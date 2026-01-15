@@ -5,8 +5,33 @@ import logging
 from typing import Any, Callable
 
 from pymodbus.client import AsyncModbusSerialClient
+from pymodbus.factory import ClientDecoder
+from pymodbus.framer.rtu_framer import ModbusRtuFramer
+
+from .statistics import STATS_MANAGER, StatisticsManager
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class CountingRtuFramer(ModbusRtuFramer):
+    """A framer that counts sent and received bytes."""
+
+    def __init__(self, decoder: ClientDecoder, client: AsyncModbusSerialClient | None = None, *, stats_manager: StatisticsManager, endpoint: str) -> None:
+        """Initialize the counting framer."""
+        super().__init__(decoder, client)
+        self._stats_manager = stats_manager
+        self._endpoint = endpoint
+
+    def build_packet(self, message: bytes) -> bytes:
+        """Count sent bytes."""
+        packet = super().build_packet(message)
+        self._stats_manager.add_bytes_sent(self._endpoint, len(packet))
+        return packet
+
+    def process_incoming_packet(self, data: bytes, callback: Callable[[Any], None], slave: int, **kwargs: Any) -> None:
+        """Count received bytes."""
+        self._stats_manager.add_bytes_received(self._endpoint, len(data))
+        super().process_incoming_packet(data, callback, slave, **kwargs)
 
 
 class RTUBusManager:
@@ -38,8 +63,10 @@ class RTUBusManager:
 
         _LOGGER.debug("Opening Modbus RTU bus on %s", self.port)
 
+        framer = CountingRtuFramer(ClientDecoder(), stats_manager=STATS_MANAGER, endpoint=self.port)
         client = AsyncModbusSerialClient(
             port=self.port,
+            framer=framer,
             **self._serial_cfg,
         )
 

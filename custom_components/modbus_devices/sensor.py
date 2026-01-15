@@ -1,6 +1,7 @@
 import logging
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import ModbusCoordinator
@@ -23,7 +24,38 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 if isinstance(datapoint.entity_data, EntityDataSensor):
                     ha_entities.append(ModbusSensorEntity(coordinator, group, key, datapoint))
 
-    async_add_entities(ha_entities, False)
+    # --- Add bus statistics sensors ---
+    if not hass.data[DOMAIN].get("bus_sensors_added"):
+        hass.data[DOMAIN]["bus_sensors_added"] = True
+        bus_coordinators = hass.data[DOMAIN].get("bus_coordinators", {})
+        for bus_coordinator in bus_coordinators.values():
+            ha_entities.append(BusStatisticsSensor(bus_coordinator, "sent"))
+            ha_entities.append(BusStatisticsSensor(bus_coordinator, "received"))
+
+async_add_entities(ha_entities, True)
+
+class BusStatisticsSensor(CoordinatorEntity, SensorEntity):
+    """Representation of a bus statistics sensor."""
+
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = "B"
+    _attr_has_entity_name = True
+    _attr_entity_category = "diagnostic"
+
+    def __init__(self, coordinator, sensor_type: str):
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._sensor_type = sensor_type # "sent" or "received"
+        self._attr_unique_id = f"bus_{coordinator.endpoint}_{sensor_type}"
+        self._attr_name = f"Bytes {sensor_type}"
+        self._attr_device_info = coordinator.device_info
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        if self.coordinator.data:
+            return self.coordinator.data.get(self._sensor_type)
+        return None
 
 class ModbusSensorEntity(ModbusBaseEntity, SensorEntity):
     """Representation of a Sensor."""

@@ -11,6 +11,8 @@ from .const import ByteOrder, WordOrder, ModbusMode, ModbusPollMode
 from .datatypes import ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
 from .datatypes import EntityDataSelect, EntityDataNumber, EntityDataSensor
 from ..rtu_bus import RTUBusManager, RTUBusClient
+from ..statistics import STATS_MANAGER, CountingTcpFramer
+from pymodbus.factory import ClientDecoder
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +29,9 @@ class ModbusDevice():
 
     def __init__(self, connection_params: ConnectionParams, rtu_bus: RTUBusManager):
         if isinstance(connection_params, TCPConnectionParams):
-            self._client = AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port)
+            endpoint = f"{connection_params.ip}:{connection_params.port}"
+            framer = CountingTcpFramer(ClientDecoder(), stats_manager=STATS_MANAGER, endpoint=endpoint)
+            self._client = AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port, framer=framer)
         elif isinstance(connection_params, RTUConnectionParams):
             self._client = RTUBusClient(rtu_bus)
         else:
