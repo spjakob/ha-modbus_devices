@@ -146,7 +146,7 @@ class ModbusEndpointCounterSensor(SensorEntity):
             name=config_entry.title, # Title is set in Config Flow (e.g. "RTU Endpoint /dev/ttyUSB0")
             manufacturer="Modbus Endpoint",
             model="Bus Statistics",
-            via_device=(DOMAIN, config_entry.entry_id), # It is its own device
+            # via_device removed to fix warning
         )
 
     @property
