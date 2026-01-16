@@ -15,7 +15,7 @@ from .entity import ModbusBaseEntity
 _LOGGER = logging.getLogger(__name__)
 
 class ModbusCoordinator(DataUpdateCoordinator):    
-    def __init__(self, hass, device, device_model:str, connection_params, scan_interval, scan_interval_fast, rtu_bus):
+    def __init__(self, hass, device, device_model:str, connection_params, scan_interval, scan_interval_fast, bus_manager):
         """Initialize coordinator parent"""
         super().__init__(
             hass,
@@ -28,7 +28,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
 
         self.device_model = device_model
         self.connection_params = connection_params
-        self.rtu_bus = rtu_bus
+        self.bus_manager = bus_manager
 
         self._fast_poll_enabled = False
         self._fast_poll_count = 0
@@ -49,7 +49,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
         device_class = await load_device_class(self.device_model)
         if device_class is not None:
             try:
-                self._modbusDevice = device_class(self.connection_params, self.rtu_bus)
+                self._modbusDevice = device_class(self.connection_params, self.bus_manager)
             except Exception as err:
                 raise ConfigEntryNotReady("Could not read data from device!") from err
         else:
