@@ -59,15 +59,13 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         """Handle a flow initialized by the user."""
         errors = {}
 
-        # Menu: Create Endpoint or Create Device
+        # Menu: Create Device is default/first
         MENU_OPTIONS = [
+            "add_device",
             "add_tcp_endpoint",
-            "add_rtu_endpoint",
-            "add_device"
+            "add_rtu_endpoint"
         ]
 
-        # If the user selected a menu option via the `user` step logic or standard menu logic
-        # But here we implement a custom menu
         if user_input is not None:
              selection = user_input.get(CONF_MODE_SELECTION)
              if selection == "add_tcp_endpoint":
@@ -80,13 +78,10 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required(CONF_MODE_SELECTION): selector.SelectSelector(
+                vol.Required(CONF_MODE_SELECTION, default="add_device"): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=MENU_OPTIONS,
                         translation_key="mode_selection"
-                        # We rely on strings.json to translate these keys if possible,
-                        # or just raw strings for now if translation key mapping is tricky.
-                        # Actually, let's use simple dict for options to be safe
                     )
                 )
             }),
@@ -101,8 +96,6 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             user_input[CONF_TYPE] = TYPE_ENDPOINT
             user_input[CONF_DEVICE_MODE] = DEVICE_MODE_TCPIP
-            # Check unique ID? usually IP:Port
-            # But ConfigEntry doesn't enforce uniqueness unless we call async_set_unique_id
             return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
 
         return self.async_show_form(
@@ -146,7 +139,6 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         endpoints = self._get_endpoints()
         if not endpoints:
              errors["base"] = "no_endpoints"
-             # If no endpoints, we might want to tell the user to go back
 
         if user_input is not None:
             user_input[CONF_TYPE] = TYPE_DEVICE
@@ -158,7 +150,13 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id="add_device",
             data_schema=vol.Schema({
                 vol.Required(CONF_NAME, default=DEVICE_DATA_DEFAULT[CONF_NAME]): cv.string,
-                vol.Required(CONF_ENDPOINT_ID): selector.SelectSelector(selector.SelectSelectorConfig(options=endpoints)),
+                # Explicitly force DROPDOWN mode here
+                vol.Required(CONF_ENDPOINT_ID): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=endpoints,
+                        mode=selector.SelectSelectorMode.DROPDOWN
+                    )
+                ),
                 vol.Required(CONF_DEVICE_MODEL): selector.SelectSelector(selector.SelectSelectorConfig(options=DEVICE_MODELS)),
                 vol.Required(CONF_SLAVE_ID, default=DEVICE_DATA_DEFAULT[CONF_SLAVE_ID]): int,
                 vol.Optional(CONF_SCAN_INTERVAL, default=DEVICE_DATA_DEFAULT[CONF_SCAN_INTERVAL]): int,
@@ -172,7 +170,6 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         entries = self.hass.config_entries.async_entries(DOMAIN)
         options = []
         for entry in entries:
-            # We identify endpoints by the 'conf_type' field OR implicit check
             if entry.data.get(CONF_TYPE) == TYPE_ENDPOINT:
                 options.append(selector.SelectOptionDict(value=entry.entry_id, label=entry.title))
         return options
@@ -186,12 +183,8 @@ class ModbusOptionsFlowHandler(OptionsFlow):
         """Manage options."""
         entry_type = self._config_entry.data.get(CONF_TYPE)
 
-        # Detect legacy entry (missing CONF_TYPE)
         if not entry_type:
-            # Check if it looks like a device (has model) or endpoint (unlikely in legacy)
-            # Legacy code mixed them. Legacy entries were devices with embedded connection.
-            # We treat legacy entries as "Devices needing Endpoint".
-            entry_type = TYPE_DEVICE # Treat as device
+            entry_type = TYPE_DEVICE
             is_legacy = True
         else:
             is_legacy = False
@@ -203,14 +196,12 @@ class ModbusOptionsFlowHandler(OptionsFlow):
 
     async def async_step_endpoint_options(self, user_input: dict[str, Any] | None = None):
         if user_input is not None:
-             # Update entry
              new_data = {**self._config_entry.data, **user_input}
              self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
              return self.async_create_entry(title="", data={})
 
         data = self._config_entry.data
         schema = {}
-        # Simple schema based on mode
         if data.get(CONF_DEVICE_MODE) == DEVICE_MODE_TCPIP:
             schema = {
                 vol.Required(CONF_IP, default=data.get(CONF_IP)): cv.string,
@@ -230,14 +221,9 @@ class ModbusOptionsFlowHandler(OptionsFlow):
         errors = {}
 
         if user_input is not None:
-            # If migrating from legacy, we must set the TYPE
             new_data = {**self._config_entry.data, **user_input}
             if is_legacy:
                 new_data[CONF_TYPE] = TYPE_DEVICE
-                # We intentionally do NOT remove old connection keys to allow easier reversion if needed.
-                # The presence of extra keys does not harm the new logic.
-                # for key in [CONF_IP, CONF_PORT, CONF_SERIAL_PORT, CONF_SERIAL_BAUD, CONF_DEVICE_MODE]:
-                #    new_data.pop(key, None)
 
             self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
             return self.async_create_entry(title="", data={})
@@ -249,16 +235,13 @@ class ModbusOptionsFlowHandler(OptionsFlow):
         if not current_endpoint and not endpoints:
              errors["base"] = "no_endpoints"
 
-        # Schema for device options
-        # Allow changing Endpoint, Slave ID, Scan Interval
         DEVICE_MODELS = sorted(await get_available_drivers())
 
         schema = {
-             vol.Required(CONF_ENDPOINT_ID, default=current_endpoint): selector.SelectSelector(selector.SelectSelectorConfig(options=endpoints)),
+             vol.Required(CONF_ENDPOINT_ID, default=current_endpoint): selector.SelectSelector(selector.SelectSelectorConfig(options=endpoints, mode=selector.SelectSelectorMode.DROPDOWN)),
              vol.Required(CONF_SLAVE_ID, default=data.get(CONF_SLAVE_ID)): int,
              vol.Optional(CONF_SCAN_INTERVAL, default=data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)): int,
              vol.Optional(CONF_SCAN_INTERVAL_FAST, default=data.get(CONF_SCAN_INTERVAL_FAST, DEFAULT_SCAN_INTERVAL_FAST)): int,
-             # Optionally allow changing model? Yes.
              vol.Required(CONF_DEVICE_MODEL, default=data.get(CONF_DEVICE_MODEL)): selector.SelectSelector(selector.SelectSelectorConfig(options=DEVICE_MODELS)),
         }
 
@@ -273,7 +256,6 @@ class ModbusOptionsFlowHandler(OptionsFlow):
                 options.append(selector.SelectOptionDict(value=entry.entry_id, label=entry.title))
         return options
 
-# Helper
 async def async_get_ports():
     try:
         return await asyncio.to_thread(glob.glob, '/dev/serial/by-id/*')
