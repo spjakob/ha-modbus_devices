@@ -26,17 +26,31 @@ class ModbusDevice():
     byte_order = ByteOrder.MSB
     word_order = WordOrder.NORMAL
 
-    def __init__(self, connection_params: ConnectionParams, rtu_bus: RTUBusManager = None, tcp_bus: TCPBusManager = None):
-        self._bus_manager = None
+    def __init__(self, connection_params: ConnectionParams, bus_manager):
+        self._bus_manager = bus_manager
 
-        if isinstance(connection_params, TCPConnectionParams):
-            self._client = AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port)
-            self._bus_manager = tcp_bus
-        elif isinstance(connection_params, RTUConnectionParams):
-            self._client = RTUBusClient(rtu_bus)
-            self._bus_manager = rtu_bus
+        if isinstance(bus_manager, TCPBusManager):
+             # Create a new TCP client per device?
+             # In original code, TCP devices had their own client.
+             # In refactor, we have a TCPBusManager.
+             # However, AsyncModbusTcpClient is typically per-host.
+             # If we share the client, we need a lock.
+             # TCPBusManager currently only has counters.
+             # If we want to use pymodbus AsyncModbusTcpClient, it can handle multiple requests?
+             # For now, let's keep the client managed by the Device (as originally), BUT we hook into bus_manager for stats.
+             # Wait, if we want shared TCP stats, we should probably share the client logic too?
+             # But TCP allows multiple connections.
+             # Let's create a NEW client for this device but report stats to the manager.
+             # Unless we want to support multiple devices behind a single gateway efficiently.
+             # Original code: AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port)
+             self._client = AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port)
+             # Note: If user has 10 devices on same IP, this opens 10 connections. This is how it was.
+             # We will optimize this later if needed. For now, we just want shared stats.
+
+        elif isinstance(bus_manager, RTUBusManager):
+            self._client = RTUBusClient(bus_manager)
         else:
-            raise ValueError("Unsupported connection parameters")
+            raise ValueError("Unsupported bus manager")
 
         self._slave_id = connection_params.slave_id
 

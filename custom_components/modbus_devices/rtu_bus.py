@@ -33,7 +33,6 @@ class RTUBusManager:
         self.rx_packets = 0
         self.tx_bits = 0
         self.rx_bits = 0
-        self.sensors_created = False
 
     # ------------------------------------------------------------------
     # Lifecycle
