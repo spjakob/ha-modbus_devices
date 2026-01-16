@@ -1,4 +1,5 @@
 import logging
+import time
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
@@ -28,6 +29,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         entities = []
         entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "packets", "packets"))
         entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "bits", "bits"))
+        entities.append(ModbusEndpointRateSensor(bus_manager, config_entry))
         async_add_entities(entities, False)
         return
 
@@ -139,14 +141,12 @@ class ModbusEndpointCounterSensor(SensorEntity):
         self._attr_name = f"Total {counter_type.capitalize()}"
         self._attr_unique_id = f"{config_entry.entry_id}_total_{counter_type}"
 
-        # Link to the Endpoint Device (the Config Entry itself creates a device? No, we need to create one)
-        # We use the config entry ID as the device identifier for the Endpoint.
+        # Link to the Endpoint Device
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, config_entry.entry_id)},
-            name=config_entry.title, # Title is set in Config Flow (e.g. "RTU Endpoint /dev/ttyUSB0")
+            name=config_entry.title,
             manufacturer="Modbus Endpoint",
             model="Bus Statistics",
-            # via_device removed to fix warning
         )
 
     @property
@@ -161,18 +161,57 @@ class ModbusEndpointCounterSensor(SensorEntity):
     def available(self) -> bool:
         return True
 
-    # Note: How does this sensor update?
-    # It needs to listen to updates.
-    # The BusManager doesn't have a listener mechanism.
-    # But when ANY coordinator updates, it schedules an update?
-    # Or we can make this sensor poll?
-    # Or we can have the ModbusDevice trigger an update on the bus manager?
-    # Current implementation of BusManager has `update_counters`.
-    # We can add a simple observer pattern to BusManager?
-    # Or we can just let HA poll it (it's a local sensor, so it's fast).
-    # SensorEntity defaults to push. If `should_poll` is True (default for non-push), HA polls it.
-    # So we can just rely on polling.
+    @property
+    def should_poll(self) -> bool:
+        return True
+
+class ModbusEndpointRateSensor(SensorEntity):
+    """Sensor for tracking average bits per second for an endpoint."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_has_entity_name = True
+    _attr_native_unit_of_measurement = "bps"
+    _attr_name = "Average Data Rate"
+
+    def __init__(self, bus_manager, config_entry):
+        self.bus_manager = bus_manager
+        self._unique_id = f"{config_entry.entry_id}_rate_bps"
+
+        # Internal state for calculating rate
+        self._last_total_bits = 0
+        self._last_time = time.time()
+        self._current_rate = 0.0
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry.entry_id)},
+            name=config_entry.title,
+            manufacturer="Modbus Endpoint",
+            model="Bus Statistics",
+        )
+
+    @property
+    def unique_id(self):
+        return self._unique_id
+
+    @property
+    def native_value(self):
+        return round(self._current_rate, 2)
 
     @property
     def should_poll(self) -> bool:
         return True
+
+    def update(self):
+        """Calculate the rate since last poll."""
+        current_bits = self.bus_manager.tx_bits + self.bus_manager.rx_bits
+        current_time = time.time()
+
+        delta_bits = current_bits - self._last_total_bits
+        delta_time = current_time - self._last_time
+
+        # Avoid division by zero
+        if delta_time > 0:
+            self._current_rate = delta_bits / delta_time
+
+        self._last_total_bits = current_bits
+        self._last_time = current_time

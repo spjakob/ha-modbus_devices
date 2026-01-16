@@ -3,70 +3,77 @@
     "config": {         
         "step": {   
             "user": { 
-				"title": "Add Modbus Device",
+				"title": "Add Modbus Configuration",
                 "data": {
-                    "mode_selection": "Select a connection method"
+                    "mode_selection": "What do you want to add?"
                 }   
             }, 
-            "add_tcpip": { 
-				"title": "Modbus TCP/IP Settings",
-                "description": "Enter your details",
+            "add_tcp_endpoint": {
+				"title": "Add Modbus TCP Endpoint",
+                "description": "Configure the TCP connection (Gateway/IP).",
                 "data": {                     
-                    "name": "Name", 
-                    "device_model": "Device Model",                   
+                    "name": "Endpoint Name",
                     "ip_address": "IP Address",
-					"port": "Port",
-					"slave_id": "Slave ID",
-					"scan_interval": "Scan Interval in seconds",
-                    "scan_interval_fast": "Fast Scan Interval in seconds"  	
+					"port": "Port"
                 }        
             }, 
-            "add_rtu": { 
-				"title": "Modbus RTU Settings",
-                "description": "Enter your details",
+            "add_rtu_endpoint": {
+				"title": "Add Modbus RTU Endpoint",
+                "description": "Configure the Serial connection (USB/Serial Port).",
                 "data": {                     
-                    "name": "Name", 
-                    "device_model": "Device Model",                   
+                    "name": "Endpoint Name",
                     "serial_port": "Serial port",
-					"serial_baud": "Baud rate",
+					"serial_baud": "Baud rate"
+                }
+            },
+            "add_device": {
+				"title": "Add Modbus Device",
+                "description": "Add a device and link it to an Endpoint.",
+                "data": {
+                    "name": "Device Name",
+                    "endpoint_id": "Select Endpoint",
+                    "device_model": "Device Model",
 					"slave_id": "Slave ID",
-					"scan_interval": "Scan Interval in seconds",
-                    "scan_interval_fast": "Fast Scan Interval in seconds"  	
+					"scan_interval": "Scan Interval (s)",
+                    "scan_interval_fast": "Fast Scan Interval (s)"
                 }        
             }
         },
         "error": {
-            "mode_not_implemented": "The selected mode is not implemented."
+            "mode_not_implemented": "The selected mode is not implemented.",
+            "no_endpoints": "No Endpoints found. Please add an Endpoint first."
         }		
     },   
     "options": {         
         "step": {
             "init": {
 				"title": "Modbus Settings",
-                "description": "Enter your details",
+                "description": "Update configuration.",
                 "data": {                     
-                    "name": "Name", 
+                    "name": "Name",
+                    "endpoint_id": "Connected Endpoint",
                     "device_model": "Device Model",                    
                     "ip_address": "IP Address",
 					"port": "Port",
                     "serial_port": "Serial port",
 					"serial_baud": "Baud rate",
 					"slave_id": "Slave ID",
-					"scan_interval": "Scan Interval in seconds",
-                    "scan_interval_fast": "Fast Scan Interval in seconds"  	
+					"scan_interval": "Scan Interval (s)",
+                    "scan_interval_fast": "Fast Scan Interval (s)"
                 }
             }
         },
 		"abort": {
-            "add_success": "Device {dev_name} successfully added",
+            "add_success": "Successfully added {dev_name}",
 			"already_configured": "Device {dev_name} is already configured"
 		}
     },
     "selector": {
         "mode_selection": {
             "options": {
-				"add_tcpip": "TCP/IP",
-                "add_rtu": "RTU"
+				"add_tcp_endpoint": "Modbus TCP Endpoint (Network)",
+                "add_rtu_endpoint": "Modbus RTU Endpoint (Serial)",
+                "add_device": "Modbus Device"
             }
         }
     },
