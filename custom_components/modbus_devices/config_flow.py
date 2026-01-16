@@ -180,11 +180,11 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
 
 class ModbusOptionsFlowHandler(OptionsFlow):
     def __init__(self, config_entry: ConfigEntry) -> None:
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         """Manage options."""
-        entry_type = self.config_entry.data.get(CONF_TYPE)
+        entry_type = self._config_entry.data.get(CONF_TYPE)
 
         # Detect legacy entry (missing CONF_TYPE)
         if not entry_type:
@@ -204,11 +204,11 @@ class ModbusOptionsFlowHandler(OptionsFlow):
     async def async_step_endpoint_options(self, user_input: dict[str, Any] | None = None):
         if user_input is not None:
              # Update entry
-             new_data = {**self.config_entry.data, **user_input}
-             self.hass.config_entries.async_update_entry(self.config_entry, data=new_data)
+             new_data = {**self._config_entry.data, **user_input}
+             self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
              return self.async_create_entry(title="", data={})
 
-        data = self.config_entry.data
+        data = self._config_entry.data
         schema = {}
         # Simple schema based on mode
         if data.get(CONF_DEVICE_MODE) == DEVICE_MODE_TCPIP:
@@ -231,17 +231,18 @@ class ModbusOptionsFlowHandler(OptionsFlow):
 
         if user_input is not None:
             # If migrating from legacy, we must set the TYPE
-            new_data = {**self.config_entry.data, **user_input}
+            new_data = {**self._config_entry.data, **user_input}
             if is_legacy:
                 new_data[CONF_TYPE] = TYPE_DEVICE
-                # We can optionally remove the old connection params to clean up
-                for key in [CONF_IP, CONF_PORT, CONF_SERIAL_PORT, CONF_SERIAL_BAUD, CONF_DEVICE_MODE]:
-                    new_data.pop(key, None)
+                # We intentionally do NOT remove old connection keys to allow easier reversion if needed.
+                # The presence of extra keys does not harm the new logic.
+                # for key in [CONF_IP, CONF_PORT, CONF_SERIAL_PORT, CONF_SERIAL_BAUD, CONF_DEVICE_MODE]:
+                #    new_data.pop(key, None)
 
-            self.hass.config_entries.async_update_entry(self.config_entry, data=new_data)
+            self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
             return self.async_create_entry(title="", data={})
 
-        data = self.config_entry.data
+        data = self._config_entry.data
         endpoints = self._get_endpoints()
 
         current_endpoint = data.get(CONF_ENDPOINT_ID)

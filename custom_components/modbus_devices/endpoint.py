@@ -3,6 +3,7 @@ import logging
 from typing import Any
 from .tcp_bus import TCPBusManager
 from .rtu_bus import RTUBusManager
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
