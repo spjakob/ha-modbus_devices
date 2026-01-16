@@ -1,7 +1,7 @@
 import logging
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
 from .const import DOMAIN
 from .coordinator import ModbusCoordinator
@@ -87,6 +87,7 @@ class ModbusDeviceCounterSensor(SensorEntity):
 
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator: ModbusCoordinator, counter_type: str, unit: str):
         self.coordinator = coordinator
@@ -123,6 +124,7 @@ class ModbusEndpointCounterSensor(SensorEntity):
 
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_has_entity_name = True
+    # Explicitly NOT Diagnostic, as requested
 
     def __init__(self, coordinator: ModbusCoordinator, bus_manager, counter_type: str, unit: str, endpoint_id: str, endpoint_name: str):
         self.coordinator = coordinator
