@@ -27,7 +27,7 @@ from .const import (
 
 from .coordinator import ModbusCoordinator
 from .devices.connection import TCPConnectionParams, RTUConnectionParams
-from .rtu_bus import RTUBusManager, RTUBusClient
+from .busmanager import RTUBusManager, TCPBusManager, BusClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,18 +43,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     device_model = entry.data.get(CONF_DEVICE_MODEL, None)
     scan_interval = entry.data[CONF_SCAN_INTERVAL]
     scan_interval_fast = entry.data[CONF_SCAN_INTERVAL_FAST]
+    slave_id = entry.data[CONF_SLAVE_ID]
 
-    rtu_bus = None
+    bus = None
 
     if device_mode == DEVICE_MODE_TCPIP:
         ip = entry.data[CONF_IP]
         port = entry.data[CONF_PORT]
-        slave_id = entry.data[CONF_SLAVE_ID]
-        connection_params = TCPConnectionParams(ip, port, slave_id)
+
+        # ----- TCP bus setup -----
+        tcp_buses = hass.data.setdefault(DOMAIN, {}).setdefault("tcp_buses", {})
+        bus_key = f"{ip}:{port}"
+
+        bus = tcp_buses.get(bus_key)
+        if bus is None:
+            bus = TCPBusManager(host=ip, port=port, timeout=3.0, )
+            tcp_buses[bus_key] = bus
+
+        bus.attach(entry.entry_id)
     elif device_mode == DEVICE_MODE_RTU:
         serial_port = entry.data[CONF_SERIAL_PORT]
         baudrate = entry.data[CONF_SERIAL_BAUD]
-        connection_params = RTUConnectionParams(serial_port, baudrate)
 
         # ----- RTU bus setup -----
         rtu_buses = hass.data.setdefault(DOMAIN, {}).setdefault("rtu_buses", {})
@@ -62,17 +71,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         if bus is None:
             # First device on this port → create bus
-            bus = RTUBusManager(hass=hass, port=serial_port, baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0)
+            bus = RTUBusManager(port=serial_port, baudrate=baudrate)
             rtu_buses[serial_port] = bus
         else:
             # Validate settings
-            if not bus.matches_serial_config(baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0):
+            if not bus.matches_serial_config(baudrate=baudrate):
                 _LOGGER.error("Serial port %s already in use with different settings", serial_port)
                 return False
 
         bus.attach(entry.entry_id)
-        rtu_bus = bus  # pass bus to device / coordinator
-
     else:
         _LOGGER.error(f"Unsupported device mode: {device_mode}")
         return False    
@@ -89,7 +96,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Set up coordinator
-    coordinator = ModbusCoordinator(hass, dev, device_model, connection_params, scan_interval, scan_interval_fast, rtu_bus=rtu_bus)
+    client = BusClient(bus, slave_id)
+    coordinator = ModbusCoordinator(hass, dev, device_model, scan_interval, scan_interval_fast, bus=client)
     hass.data[DOMAIN][entry.entry_id] = coordinator
     
     # Might throw ConfigEntryNotReady, which should cause retry later
@@ -148,6 +156,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator = hass.data[DOMAIN].get(entry.entry_id)
         if coordinator:
             coordinator.close()
+
+        # Detach buses
+        tcp_buses = hass.data.setdefault(DOMAIN, {}).setdefault("tcp_buses", {})
+        rtu_buses = hass.data.setdefault(DOMAIN, {}).setdefault("rtu_buses", {})
+        
+        for bus in list(tcp_buses.values()) + list(rtu_buses.values()):
+                    await bus.detach(entry.entry_id)
 
         # Remove entry data
         hass.data[DOMAIN].pop(entry.entry_id)

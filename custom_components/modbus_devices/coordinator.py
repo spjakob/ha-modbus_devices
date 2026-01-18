@@ -1,11 +1,12 @@
 import async_timeout
-import copy
 import datetime as dt
 import logging
 
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, ConfigEntryNotReady, ConfigEntryError
 
+from .busmanager import BusClient
+from .const import DOMAIN
 from .devices.helpers import load_device_class
 from .devices.datatypes import ModbusDefaultGroups, ModbusDatapoint
 from .devices.datatypes import EntityDataSelect, EntityDataNumber
@@ -15,27 +16,26 @@ from .entity import ModbusBaseEntity
 _LOGGER = logging.getLogger(__name__)
 
 class ModbusCoordinator(DataUpdateCoordinator):    
-    def __init__(self, hass, device, device_model:str, connection_params, scan_interval, scan_interval_fast, rtu_bus):
+    def __init__(self, hass, device_entry, device_model:str, scan_interval, scan_interval_fast, bus:BusClient):
         """Initialize coordinator parent"""
         super().__init__(
             hass,
             _LOGGER,
             # Name of the data. For logging purposes.
-            name="ModbusDevice: " + device.name,
+            name="ModbusDevice: " + device_entry.name,
             # Polling interval. Will only be polled if there are subscribers.
             update_interval=dt.timedelta(seconds=scan_interval),
         )
 
         self.device_model = device_model
-        self.connection_params = connection_params
-        self.rtu_bus = rtu_bus
+        self.bus = bus
 
         self._fast_poll_enabled = False
         self._fast_poll_count = 0
         self._normal_poll_interval = scan_interval
         self._fast_poll_interval = scan_interval_fast
 
-        self._device = device
+        self._device_entry = device_entry
 
         self._modbusDevice: ModbusDevice | None = None
 
@@ -49,7 +49,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
         device_class = await load_device_class(self.device_model)
         if device_class is not None:
             try:
-                self._modbusDevice = device_class(self.connection_params, self.rtu_bus)
+                self._modbusDevice = device_class(self.bus)
             except Exception as err:
                 raise ConfigEntryNotReady("Could not read data from device!") from err
         else:
@@ -61,15 +61,15 @@ class ModbusCoordinator(DataUpdateCoordinator):
 
     @property
     def device_id(self):
-        return self._device.id
+        return self._device_entry.id
 
     @property
     def devicename(self):
-        return self._device.name
+        return self._device_entry.name
 
     @property
     def identifiers(self):
-        return self._device.identifiers
+        return self._device_entry.identifiers
 
     def setFastPollMode(self):
         _LOGGER.debug("Enabling fast poll mode")
@@ -154,11 +154,11 @@ class ModbusCoordinator(DataUpdateCoordinator):
             self.config_value_active.modbusDataPoint = new_dp
             self.config_value_active._group = ModbusDefaultGroups.CONFIG
             self.config_value_active._key = key
+            self.config_value_active.rename(self.hass, key)
             self.config_value_active._loadEntitySettings()
             await self._modbusDevice.readValue(ModbusDefaultGroups.CONFIG, key)
         finally:
-            _LOGGER.debug("Updating!")
-            self.config_value_active.async_schedule_update_ha_state()
+            self.config_value_active.async_write_ha_state()
 
     def get_config_options(self):
         options = {}

@@ -2,6 +2,7 @@
 import logging
 
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .devices.datatypes import ModbusGroup, ModbusDatapoint
 
@@ -19,9 +20,7 @@ class ModbusBaseEntity(CoordinatorEntity):
         self._attr_icon = modbusDataPoint.entity_data.icon
         self._attr_name = "{} {}".format(self.coordinator.devicename, key)
         self._attr_unique_id = "{}-{}".format(self.coordinator.device_id, self.name)
-        self._attr_device_info = {
-            "identifiers": self.coordinator.identifiers,
-        }
+        self._attr_device_info = DeviceInfo(identifiers=self.coordinator.identifiers)
         self._attr_entity_registry_enabled_default = modbusDataPoint.entity_data.enabledDefault
         
         """Store this entities keys."""
@@ -52,5 +51,6 @@ class ModbusBaseEntity(CoordinatorEntity):
             # Detach from device
             ent_reg.async_update_entity(self.entity_id, device_id=None)
 
-        # Refresh frontend immediately
-        self.async_write_ha_state()
+    def rename(self, hass, name: str):
+        ent_reg = er.async_get(hass)
+        ent_reg.async_update_entity(self.entity_id, name=name)

@@ -6,11 +6,11 @@ from homeassistant.helpers.entity import EntityCategory
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
-from .connection import ConnectionParams, TCPConnectionParams, RTUConnectionParams
 from .const import ByteOrder, WordOrder, ModbusMode, ModbusPollMode
 from .datatypes import ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
-from .datatypes import EntityDataSelect, EntityDataNumber, EntityDataSensor
-from ..rtu_bus import RTUBusManager, RTUBusClient
+from .datatypes import EntityDataSelect, EntityDataNumber
+from .modbustraffic import ModbusTrafficStats
+from ..busmanager import BusClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,14 +25,15 @@ class ModbusDevice():
     byte_order = ByteOrder.MSB
     word_order = WordOrder.NORMAL
 
-    def __init__(self, connection_params: ConnectionParams, rtu_bus: RTUBusManager):
-        if isinstance(connection_params, TCPConnectionParams):
-            self._client = AsyncModbusTcpClient(host=connection_params.ip, port=connection_params.port)
-        elif isinstance(connection_params, RTUConnectionParams):
-            self._client = RTUBusClient(rtu_bus)
-        else:
-            raise ValueError("Unsupported connection parameters")
-        self._slave_id = connection_params.slave_id
+    def __init__(self, client: BusClient):
+        self._client = client
+        self._slave_id = client.slave_id
+
+        # Per-device traffic stats
+        self.traffic = ModbusTrafficStats()
+
+        # Register device stats with the bus
+        self._client._bus.register_device(self._slave_id, self.traffic)
 
         self.Datapoints: dict[ModbusGroup, dict[str, ModbusDatapoint]] = {}
         self.loadDatapoints()
@@ -40,6 +41,7 @@ class ModbusDevice():
         _LOGGER.debug("Loaded datapoints for %s %s", self.manufacturer, self.model)
 
         self.firstRead = True
+
 
     def close(self):
         """Close the underlying client safely."""
@@ -82,13 +84,19 @@ class ModbusDevice():
     def onAfterFirstRead(self):
         pass
 
+    # Packet tracing
+    def packet_trace(self, is_tx: bool, packet: bytes) -> bytes:
+        _LOGGER.warning("DEVICE TRACE %s %d bytes", "TX" if is_tx else "RX", len(packet))
+        if is_tx:
+            self.traffic.record_tx(len(packet))
+        else:
+            self.traffic.record_rx(len(packet))
+        return packet
+
     """ ******************************************************* """
     """ *********** EXTERNAL CALL TO READ ALL DATA ************ """
     """ ******************************************************* """
     async def readData(self):
-        if self.firstRead:      
-            await self._client.connect() 
-
         self.onBeforeRead()
 
         try:

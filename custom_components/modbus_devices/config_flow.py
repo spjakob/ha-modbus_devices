@@ -78,13 +78,15 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         # Copy ip from existing integration, just for convenience
         existing_entries = self.hass.config_entries.async_entries(DOMAIN)
         filtered_entries = [entry for entry in existing_entries if entry.data.get(CONF_DEVICE_MODE) == DEVICE_MODE_TCPIP]
+        
+        data = DEVICE_DATA_TCPIP.copy()
         if filtered_entries:
             last_entry = filtered_entries[-1]
-            DEVICE_DATA_TCPIP[CONF_DEVICE_MODEL] = last_entry.data[CONF_DEVICE_MODEL]
-            DEVICE_DATA_TCPIP[CONF_IP] = last_entry.data[CONF_IP]
-            DEVICE_DATA_TCPIP[CONF_PORT] = last_entry.data[CONF_PORT]
+            data[CONF_DEVICE_MODEL] = last_entry.data[CONF_DEVICE_MODEL]
+            data[CONF_IP] = last_entry.data[CONF_IP]
+            data[CONF_PORT] = last_entry.data[CONF_PORT]
 
-        return self.async_show_form(step_id="add_tcpip", data_schema=await getDeviceSchema(DEVICE_DATA_TCPIP.copy()), errors=errors)
+        return self.async_show_form(step_id="add_tcpip", data_schema=await get_device_schema(data), errors=errors)
     
     async def async_step_add_rtu(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle a flow initialized by the user, adding the integration."""
@@ -98,13 +100,15 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
         # Copy ip from existing integration, just for convenience
         existing_entries = self.hass.config_entries.async_entries(DOMAIN)
         filtered_entries = [entry for entry in existing_entries if entry.data.get(CONF_DEVICE_MODE) == DEVICE_MODE_RTU]
+        
+        data = DEVICE_DATA_RTU.copy()
         if filtered_entries:
             last_entry = filtered_entries[-1]
-            DEVICE_DATA_RTU[CONF_DEVICE_MODEL] = last_entry.data[CONF_DEVICE_MODEL]
-            DEVICE_DATA_RTU[CONF_SERIAL_PORT] = last_entry.data[CONF_SERIAL_PORT]
-            DEVICE_DATA_RTU[CONF_SERIAL_BAUD] = last_entry.data[CONF_SERIAL_BAUD]
+            data[CONF_DEVICE_MODEL] = last_entry.data[CONF_DEVICE_MODEL]
+            data[CONF_SERIAL_PORT] = last_entry.data[CONF_SERIAL_PORT]
+            data[CONF_SERIAL_BAUD] = last_entry.data[CONF_SERIAL_BAUD]
 
-        return self.async_show_form(step_id="add_rtu", data_schema=await getDeviceSchema(DEVICE_DATA_RTU.copy(), ports), errors=errors)
+        return self.async_show_form(step_id="add_rtu",data_schema=await get_device_schema(data, ports),errors=errors,)
 
 class ModbusOptionsFlowHandler(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
