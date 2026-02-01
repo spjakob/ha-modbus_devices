@@ -26,7 +26,11 @@ _LOGGER = logging.getLogger(__name__)
 # Define groups
 # Note: Regin devices often have issues with large register blocks or gaps.
 # We split groups to ensure no single read spans more than 16 registers.
-GROUP_DEVICE_INFO = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_DEVICE_INFO_1 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_DEVICE_INFO_2 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_DEVICE_INFO_3 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_DEVICE_INFO_4 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_DEVICE_INFO_5 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
 GROUP_SENSORS_1 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_SENSORS_2 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_SENSORS_3 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
@@ -42,7 +46,7 @@ class Device(ModbusDevice):
 
     def loadDatapoints(self):
         # DEVICE_INFO - Read-only
-        self.Datapoints[GROUP_DEVICE_INFO] = {
+        self.Datapoints[GROUP_DEVICE_INFO_1] = {
             "Software Type": ModbusDatapoint(
                 address=1,
                 entity_data=EntityDataSensor(
@@ -50,24 +54,32 @@ class Device(ModbusDevice):
                     category=EntityCategory.DIAGNOSTIC
                 )
             ),
+        }
+        self.Datapoints[GROUP_DEVICE_INFO_2] = {
             "Major version": ModbusDatapoint(
                 address=2,
                 entity_data=EntityDataSensor(
                     category=EntityCategory.DIAGNOSTIC
                 )
             ),
+        }
+        self.Datapoints[GROUP_DEVICE_INFO_3] = {
             "Minor version": ModbusDatapoint(
                 address=3,
                 entity_data=EntityDataSensor(
                     category=EntityCategory.DIAGNOSTIC
                 )
             ),
+        }
+        self.Datapoints[GROUP_DEVICE_INFO_4] = {
             "Branch version": ModbusDatapoint(
                 address=4,
                 entity_data=EntityDataSensor(
                     category=EntityCategory.DIAGNOSTIC
                 )
             ),
+        }
+        self.Datapoints[GROUP_DEVICE_INFO_5] = {
             "Revision": ModbusDatapoint(
                 address=5,
                 entity_data=EntityDataSensor(
@@ -382,9 +394,9 @@ class Device(ModbusDevice):
     def onAfterFirstRead(self):
         # Update device info
 
-        a = self.Datapoints[GROUP_DEVICE_INFO]["Software Type"].value
-        b = self.Datapoints[GROUP_DEVICE_INFO]["Major version"].value
-        c = self.Datapoints[GROUP_DEVICE_INFO]["Minor version"].value
-        d = self.Datapoints[GROUP_DEVICE_INFO]["Branch version"].value
-        e = self.Datapoints[GROUP_DEVICE_INFO]["Revision"].value
+        a = self.Datapoints[GROUP_DEVICE_INFO_1]["Software Type"].value
+        b = self.Datapoints[GROUP_DEVICE_INFO_2]["Major version"].value
+        c = self.Datapoints[GROUP_DEVICE_INFO_3]["Minor version"].value
+        d = self.Datapoints[GROUP_DEVICE_INFO_4]["Branch version"].value
+        e = self.Datapoints[GROUP_DEVICE_INFO_5]["Revision"].value
         self.sw_version = '{}{}.{}.{}-{}'.format(a,b,c,d,e)
