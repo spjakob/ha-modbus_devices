@@ -24,9 +24,14 @@ from homeassistant.components.number import NumberDeviceClass
 _LOGGER = logging.getLogger(__name__)
 
 # Define groups
+# Note: Regin devices often have issues with large register blocks or gaps.
+# We split groups to ensure no single read spans more than 16 registers.
 GROUP_DEVICE_INFO = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
-GROUP_SENSORS = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_CONTROL = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
+GROUP_SENSORS_1 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_SENSORS_2 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_SENSORS_3 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_CONTROL_1 = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
+GROUP_CONTROL_2 = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
 
 class Device(ModbusDevice):
     """Representation of a Regin RCF Modbus device."""
@@ -71,8 +76,8 @@ class Device(ModbusDevice):
             ),
         }
 
-        # SENSORS - Read (Input Registers Function 04)
-        self.Datapoints[GROUP_SENSORS] = {
+        # SENSORS - Split into smaller groups to avoid large spans
+        self.Datapoints[GROUP_SENSORS_1] = {
             "Current running mode": ModbusDatapoint(
                 address=7,
                 entity_data=EntityDataSensor(
@@ -106,6 +111,8 @@ class Device(ModbusDevice):
                     },
                 ),
             ),
+        }
+        self.Datapoints[GROUP_SENSORS_2] = {
             "Room temperature": ModbusDatapoint(
                 address=11,
                 scaling=0.1,
@@ -175,6 +182,8 @@ class Device(ModbusDevice):
                     units=PERCENTAGE
                 )
             ),
+        }
+        self.Datapoints[GROUP_SENSORS_3] = {
             "Supply air temperature": ModbusDatapoint(
                 address=47,
                 scaling=0.1,
@@ -203,8 +212,8 @@ class Device(ModbusDevice):
             ),
         }
 
-        # CONTROL - Read/Write (Holding Registers Function 03)
-        self.Datapoints[GROUP_CONTROL] = {
+        # CONTROL - Split into smaller groups to avoid large spans
+        self.Datapoints[GROUP_CONTROL_1] = {
             "Fan Mode": ModbusDatapoint(
                 address=5,
                 entity_data=EntityDataSelect(
@@ -228,6 +237,8 @@ class Device(ModbusDevice):
                     },
                 ),
             ),
+        }
+        self.Datapoints[GROUP_CONTROL_2] = {
             "Setpoint Offset": ModbusDatapoint(
                 address=76,
                 scaling=0.1,
