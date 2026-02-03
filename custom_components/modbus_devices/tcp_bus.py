@@ -23,14 +23,14 @@ class TCPBusClient:
             await self._lock.acquire()
             try:
                 if not self._client.connected:
-                    _LOGGER.debug("Connecting to shared client: %s:%s", self._client.params.host, self._client.params.port)
+                    _LOGGER.debug("Connecting to shared client: %s:%s", self._client.host, self._client.port)
                     await self._client.connect()
                 return await attr(*args, **kwargs)
             except asyncio.CancelledError:
-                _LOGGER.debug("Modbus request '%s' cancelled for %s:%s", name, self._client.params.host, self._client.params.port)
+                _LOGGER.debug("Modbus request '%s' cancelled for %s:%s", name, self._client.host, self._client.port)
                 raise
             except Exception as exc:
-                _LOGGER.error("Modbus error during '%s' on %s:%s: %s", name, self._client.params.host, self._client.params.port, exc)
+                _LOGGER.error("Modbus error during '%s' on %s:%s: %s", name, self._client.host, self._client.port, exc)
                 raise
             finally:
                 try:
