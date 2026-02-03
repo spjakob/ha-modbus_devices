@@ -1,8 +1,39 @@
 from __future__ import annotations
+import asyncio
 import logging
 from typing import Any
+from pymodbus.client import AsyncModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
+
+class TCPBusClient:
+    """Wrapper for shared AsyncModbusTcpClient with locking."""
+    def __init__(self, client: AsyncModbusTcpClient, lock: asyncio.Lock):
+        self._client = client
+        self._lock = lock
+
+    def __getattr__(self, name: str):
+        """Proxy calls to the underlying client with locking."""
+        attr = getattr(self._client, name)
+        if not callable(attr):
+            return attr
+
+        async def wrapper(*args, **kwargs):
+            async with self._lock:
+                if not self._client.connected:
+                    await self._client.connect()
+                return await attr(*args, **kwargs)
+        return wrapper
+
+    async def connect(self):
+        """Ensure connection is open."""
+        async with self._lock:
+            if not self._client.connected:
+                await self._client.connect()
+
+    def close(self):
+        """Do not close the shared connection directly."""
+        pass
 
 class TCPBusManager:
     """
@@ -15,17 +46,27 @@ class TCPBusManager:
         self.port = port
         self.users: set[str] = set()
 
+        # Shared Client and Lock
+        self._client = AsyncModbusTcpClient(host, port=port)
+        self._lock = asyncio.Lock()
+
         # Statistics
         self.tx_packets = 0
         self.rx_packets = 0
         self.tx_bits = 0
         self.rx_bits = 0
 
+    def get_client(self) -> TCPBusClient:
+        """Return a thread-safe wrapper around the shared client."""
+        return TCPBusClient(self._client, self._lock)
+
     def attach(self, entry_id: str) -> None:
         self.users.add(entry_id)
 
     def detach(self, entry_id: str) -> bool:
         self.users.discard(entry_id)
+        if not self.users:
+            self._client.close()
         return not self.users
 
     def update_counters(self, tx_bytes: int, rx_bytes: int) -> None:
