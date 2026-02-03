@@ -50,14 +50,16 @@ class ModbusCoordinator(DataUpdateCoordinator):
         if device_class is not None:
             try:
                 self._modbusDevice = device_class(self.connection_params, self.bus_manager)
+                await self._modbusDevice.async_attach_to_bus()
             except Exception as err:
                 raise ConfigEntryNotReady("Could not read data from device!") from err
         else:
             raise ConfigEntryError
 
-    def close(self):
+    async def async_close(self):
         """Close the underlying device safely."""
-        self._modbusDevice.close()
+        if self._modbusDevice:
+            await self._modbusDevice.async_close()
 
     @property
     def device_id(self):

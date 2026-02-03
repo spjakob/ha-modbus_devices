@@ -81,24 +81,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             from homeassistant.exceptions import ConfigEntryNotReady
             raise ConfigEntryNotReady(f"Endpoint {endpoint_id} not available")
 
-        # Create connection params based on what the bus manager is (RTU or TCP)
-        # Note: The Device entry only holds Slave ID.
-        # We infer the connection type from the Bus Manager type.
-        slave_id = entry.data[CONF_SLAVE_ID]
-
-        if isinstance(bus_manager, TCPBusManager):
-             # For TCP, ModbusDevice expects TCPConnectionParams
-             # But wait, ModbusDevice logic currently creates its own AsyncModbusTcpClient if passed TCPParams.
-             # We want to share the bus manager?
-             # Original design: TCP was not shared. My previous plan: TCPBusManager for stats.
-             # New design: Endpoint IS the manager.
-             # Does ModbusDevice need to change? Yes.
-             # It should accept the manager directly or params.
-             connection_params = TCPConnectionParams(bus_manager.host, bus_manager.port, slave_id)
-             # We will need to update ModbusDevice to use the shared manager if possible, or we pass the manager separately.
-        else:
-             connection_params = RTUConnectionParams(bus_manager.port, 9600, slave_id) # Baudrate doesn't matter for params here if we pass bus
-
         name = entry.data[CONF_NAME]
         device_model = entry.data.get(CONF_DEVICE_MODEL, None)
         scan_interval = entry.data[CONF_SCAN_INTERVAL]
@@ -111,6 +93,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             identifiers={(DOMAIN, entry.entry_id)},
             name=name
         )
+        
+        # Create connection params based on what the bus manager is (RTU or TCP)
+        slave_id = entry.data[CONF_SLAVE_ID]
+        if isinstance(bus_manager, TCPBusManager):
+             connection_params = TCPConnectionParams(bus_manager.host, bus_manager.port, slave_id, dev.id)
+        else:
+             connection_params = RTUConnectionParams(bus_manager.port, 9600, slave_id, dev.id) # Baudrate doesn't matter for params here if we pass bus
 
         # Set up coordinator
         # We pass the bus_manager (either RTU or TCP)
@@ -198,15 +187,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Close coordinator
         coordinator = hass.data[DOMAIN].get(entry.entry_id)
         if coordinator and isinstance(coordinator, ModbusCoordinator):
-            coordinator.close()
+            await coordinator.async_close()
             # Note: We do NOT close the bus here, as it is owned by the Endpoint entry.
-            # We might want to detach?
-            if hasattr(coordinator.bus_manager, "detach"):
-                # But our current Manager implementation is simple.
-                # RTUBusManager has reference counting.
-                # Since we are not using the "attach/detach" in the new Init flow (we just fetch it),
-                # we should probably just rely on the Endpoint managing the bus life.
-                pass
+            # The coordinator's async_close will trigger the device's async_close,
+            # which will detach from the bus, allowing the bus to close if it's the last user.
 
         hass.data[DOMAIN].pop(entry.entry_id)
 
