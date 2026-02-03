@@ -88,7 +88,7 @@ class TCPBusManager:
 
         # Shared Client and Lock
         # We use a 5s timeout and 0 retries to ensure we fail within HA's update window
-        self.client = AsyncModbusTcpClient(host, port=port, timeout=5, retries=0)
+        self.client = AsyncModbusTcpClient(host, port=port, timeout=30, retries=0)
         self._lock = asyncio.Lock()
 
         # Statistics
