@@ -22,92 +22,111 @@ from .const import (
     CONF_SLAVE_ID,
     CONF_SCAN_INTERVAL,
     CONF_SCAN_INTERVAL_FAST,
-    DEVICE_MODE_TCPIP, DEVICE_MODE_RTU
+    DEVICE_MODE_TCPIP, DEVICE_MODE_RTU,
+    CONF_TYPE, TYPE_ENDPOINT, TYPE_DEVICE, CONF_ENDPOINT_ID
 )
 
 from .coordinator import ModbusCoordinator
 from .devices.connection import TCPConnectionParams, RTUConnectionParams
-from .rtu_bus import RTUBusManager, RTUBusClient
+from .endpoint import async_setup_endpoint, async_unload_endpoint
+from .rtu_bus import RTUBusManager
+from .tcp_bus import TCPBusManager
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up platform from a ConfigEntry."""
-    _LOGGER.debug("Setting up configuration for Modbus Devices!")
     hass.data.setdefault(DOMAIN, {})
 
-    # Load config data
-    device_mode = entry.data.get(CONF_DEVICE_MODE)
+    entry_type = entry.data.get(CONF_TYPE)
 
-    name = entry.data[CONF_NAME]
-    device_model = entry.data.get(CONF_DEVICE_MODEL, None)
-    scan_interval = entry.data[CONF_SCAN_INTERVAL]
-    scan_interval_fast = entry.data[CONF_SCAN_INTERVAL_FAST]
+    # -------------------------------------------------------------
+    # 1. SETUP ENDPOINT
+    # -------------------------------------------------------------
+    if entry_type == TYPE_ENDPOINT:
+        _LOGGER.debug("Setting up Modbus Endpoint: %s", entry.title)
+        if not await async_setup_endpoint(hass, entry):
+            return False
 
-    rtu_bus = None
+        # We also want to setup sensors for the endpoint (statistics)
+        # We can reuse the PLATFORMS mechanism.
+        # But we need to make sure sensor.py knows how to handle an Endpoint entry.
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setups(entry, [PLATFORMS[4]]) # Only SENSOR platform for stats
+        )
+        return True
 
-    if device_mode == DEVICE_MODE_TCPIP:
-        ip = entry.data[CONF_IP]
-        port = entry.data[CONF_PORT]
+    # -------------------------------------------------------------
+    # 2. SETUP DEVICE
+    # -------------------------------------------------------------
+
+    # Legacy check: if no type, it's a legacy entry.
+    if not entry_type:
+        _LOGGER.warning("Device '%s' is legacy/orphaned. Please reconfigure it to select an Endpoint.", entry.title)
+        # We return False to indicate setup failed, but we want the user to be able to configure it.
+        # Returning False puts it in "Setup Failed". The Options Flow is still accessible.
+        return False
+
+    if entry_type == TYPE_DEVICE:
+        _LOGGER.debug("Setting up Modbus Device: %s", entry.title)
+
+        endpoint_id = entry.data.get(CONF_ENDPOINT_ID)
+        endpoints = hass.data.get(DOMAIN, {}).get("endpoints", {})
+        bus_manager = endpoints.get(endpoint_id)
+
+        if not bus_manager:
+            _LOGGER.error("Endpoint %s not found for device %s. Ensure Endpoint is added and loaded.", endpoint_id, entry.title)
+            # Retrying might help if endpoint loads later?
+            # ConfigEntryNotReady would be appropriate if we expect it to come up.
+            from homeassistant.exceptions import ConfigEntryNotReady
+            raise ConfigEntryNotReady(f"Endpoint {endpoint_id} not available")
+
+        name = entry.data[CONF_NAME]
+        device_model = entry.data.get(CONF_DEVICE_MODEL, None)
+        scan_interval = entry.data[CONF_SCAN_INTERVAL]
+        scan_interval_fast = entry.data[CONF_SCAN_INTERVAL_FAST]
+
+        # Create device registry entry
+        device_registry = dr.async_get(hass)
+        dev = device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=name
+        )
+        
+        # Create connection params based on what the bus manager is (RTU or TCP)
         slave_id = entry.data[CONF_SLAVE_ID]
-        connection_params = TCPConnectionParams(ip, port, slave_id)
-    elif device_mode == DEVICE_MODE_RTU:
-        serial_port = entry.data[CONF_SERIAL_PORT]
-        baudrate = entry.data[CONF_SERIAL_BAUD]
-        connection_params = RTUConnectionParams(serial_port, baudrate)
-
-        # ----- RTU bus setup -----
-        rtu_buses = hass.data.setdefault(DOMAIN, {}).setdefault("rtu_buses", {})
-        bus = rtu_buses.get(serial_port)
-
-        if bus is None:
-            # First device on this port → create bus
-            bus = RTUBusManager(hass=hass, port=serial_port, baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0)
-            rtu_buses[serial_port] = bus
+        if isinstance(bus_manager, TCPBusManager):
+             connection_params = TCPConnectionParams(bus_manager.host, bus_manager.port, slave_id, dev.id)
         else:
-            # Validate settings
-            if not bus.matches_serial_config(baudrate=baudrate, bytesize=8, parity="N", stopbits=1, timeout=3.0):
-                _LOGGER.error("Serial port %s already in use with different settings", serial_port)
-                return False
+             connection_params = RTUConnectionParams(bus_manager.port, 9600, slave_id, dev.id) # Baudrate doesn't matter for params here if we pass bus
 
-        bus.attach(entry.entry_id)
-        rtu_bus = bus  # pass bus to device / coordinator
+        # Set up coordinator
+        # We pass the bus_manager (either RTU or TCP)
+        coordinator = ModbusCoordinator(
+            hass,
+            dev,
+            device_model,
+            connection_params,
+            scan_interval,
+            scan_interval_fast,
+            bus_manager=bus_manager
+        )
+        hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    else:
-        _LOGGER.error(f"Unsupported device mode: {device_mode}")
-        return False    
+        await coordinator.async_config_entry_first_refresh()
 
-    # Create device
-    # Each config entry will have only one device, so we use the entry_id as a
-    # unique identifier for the device. This allows us to modify all device parameters without
-    # having to modify the identifier.
-    device_registry = dr.async_get(hass)
-    dev = device_registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, entry.entry_id)},
-        name=name
-    )
+        # Forward the setup to the platforms.
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        )
 
-    # Set up coordinator
-    coordinator = ModbusCoordinator(hass, dev, device_model, connection_params, scan_interval, scan_interval_fast, rtu_bus=rtu_bus)
-    hass.data[DOMAIN][entry.entry_id] = coordinator
-    
-    # Might throw ConfigEntryNotReady, which should cause retry later
-    # Or ConfigEntryError, which will cause integration to halt permanently.
-    await coordinator.async_config_entry_first_refresh()
+        entry.async_on_unload(entry.add_update_listener(update_listener))
+        hass.services.async_register(DOMAIN, "request_update", partial(service_request_update, hass))
 
-    # Forward the setup to the platforms.
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    )
+        return True
 
-    # Set up options listener
-    entry.async_on_unload(entry.add_update_listener(update_listener))
-
-    # Register services
-    hass.services.async_register(DOMAIN, "request_update",partial(service_request_update, hass))
-    
-    return True
+    return False
 
 # Service-call to update values
 async def service_request_update(hass, call: ServiceCall):
@@ -126,68 +145,53 @@ async def service_request_update(hass, call: ServiceCall):
     
     """Find the coordinator corresponding to the given device ID."""
     for entry_id, coordinator in hass.data[DOMAIN].items():
-        if getattr(coordinator, "device_id", None) == device_id:
-            await coordinator._async_update_data()
-            return
+        # Filter out endpoints (which are bus managers, not coordinators)
+        if isinstance(coordinator, ModbusCoordinator):
+            if getattr(coordinator, "device_id", None) == device_id:
+                await coordinator._async_update_data()
+                return
 
     _LOGGER.warning("No coordinator found for device ID %s", device_id)
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
-    _LOGGER.debug("Updating Modbus Devices entry!")
+    """Handle options update."""
+    _LOGGER.debug("Updating Modbus entry: %s", entry.title)
+
+    # If an endpoint is updated, we need to reload all devices using it.
+    if entry.data.get(CONF_TYPE) == TYPE_ENDPOINT:
+        all_entries = hass.config_entries.async_entries(DOMAIN)
+        device_entries_to_reload = [
+            e.entry_id
+            for e in all_entries
+            if e.data.get(CONF_TYPE) == TYPE_DEVICE and e.data.get(CONF_ENDPOINT_ID) == entry.entry_id
+        ]
+        for entry_id in device_entries_to_reload:
+            await hass.config_entries.async_reload(entry_id)
+
+    # Finally, reload the entry that was updated
     await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    entry_type = entry.data.get(CONF_TYPE)
+
+    if entry_type == TYPE_ENDPOINT:
+        return await async_unload_endpoint(hass, entry)
+
     _LOGGER.debug("Unloading Modbus Devices entry!")
 
     # Unload entries
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        # Close coordinator + devices
+        # Close coordinator
         coordinator = hass.data[DOMAIN].get(entry.entry_id)
-        if coordinator:
-            coordinator.close()
+        if coordinator and isinstance(coordinator, ModbusCoordinator):
+            await coordinator.async_close()
+            # Note: We do NOT close the bus here, as it is owned by the Endpoint entry.
+            # The coordinator's async_close will trigger the device's async_close,
+            # which will detach from the bus, allowing the bus to close if it's the last user.
 
-        # Remove entry data
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
-
-async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
-) -> bool:
-    """Remove entities and device from HASS"""
-    _LOGGER.debug("Removing entities!")
-    device_id = device_entry.id
-
-    # Remove entities from entity registry
-    ent_reg = er.async_get(hass)
-    reg_entities = {}
-    for ent in er.async_entries_for_config_entry(ent_reg, config_entry.entry_id):
-        if device_id == ent.device_id:
-            reg_entities[ent.unique_id] = ent.entity_id
-    for entity_id in reg_entities.values():
-        _LOGGER.debug("Removing entity!")
-        ent_reg.async_remove(entity_id)
-
-    # Remove device from device registry    
-    # dev_reg = dr.async_get(hass)
-    # dev_reg.async_remove_device(device_id)
-
-    """
-    # Remove device from config_entry
-    devices = []
-    for dev_id, dev_config in config_entry.data.items():
-        if dev_config[CONF_NAME] == device_entry.name:
-            devices.append(dev_config[CONF_IP])
-
-    new_data = config_entry.data.copy()
-    for dev in devices:
-        # Remove device from config entry
-        new_data[CONF_DEVICES].pop(dev)
-    hass.config_entries.async_update_entry(config_entry, data=new_data)
-    hass.config_entries._async_schedule_save()
-    """
-
-    return True

@@ -5,8 +5,16 @@ from homeassistant.const import Platform
 DOMAIN: str = "modbus_devices"
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.NUMBER, Platform.SELECT, Platform.SENSOR, Platform.SWITCH]
 
-# Configuration Device Constants
+# Configuration Constants
 CONF_NAME: str = "name"
+CONF_TYPE: str = "conf_type"
+CONF_ENDPOINT_ID: str = "endpoint_id"
+
+# Types
+TYPE_ENDPOINT = "endpoint"
+TYPE_DEVICE = "device"
+
+# Device Configuration
 CONF_DEVICE_MODE: str = "device_mode"
 CONF_DEVICE_MODEL: str = "device_model"
 CONF_SLAVE_ID: str = "slave_id"
