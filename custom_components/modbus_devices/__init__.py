@@ -165,7 +165,21 @@ async def service_request_update(hass, call: ServiceCall):
     _LOGGER.warning("No coordinator found for device ID %s", device_id)
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
-    _LOGGER.debug("Updating Modbus Devices entry!")
+    """Handle options update."""
+    _LOGGER.debug("Updating Modbus entry: %s", entry.title)
+
+    # If an endpoint is updated, we need to reload all devices using it.
+    if entry.data.get(CONF_TYPE) == TYPE_ENDPOINT:
+        all_entries = hass.config_entries.async_entries(DOMAIN)
+        device_entries_to_reload = [
+            e.entry_id
+            for e in all_entries
+            if e.data.get(CONF_TYPE) == TYPE_DEVICE and e.data.get(CONF_ENDPOINT_ID) == entry.entry_id
+        ]
+        for entry_id in device_entries_to_reload:
+            await hass.config_entries.async_reload(entry_id)
+
+    # Finally, reload the entry that was updated
     await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
