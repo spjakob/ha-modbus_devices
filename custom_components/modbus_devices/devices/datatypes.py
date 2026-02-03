@@ -70,6 +70,9 @@ class ModbusGroup:
     def __hash__(self):
         # Hash based on mode, poll_mode, and unique_id to ensure uniqueness in dict
         return hash((self.mode, self.poll_mode, self.unique_id))
+
+    def __repr__(self):
+        return f"<ModbusGroup mode={self.mode.name} poll={self.poll_mode.name}>"
     
 class ModbusDefaultGroups(Enum):
     CONFIG = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_OFF)
