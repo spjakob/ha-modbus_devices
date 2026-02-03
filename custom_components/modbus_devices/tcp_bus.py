@@ -8,9 +8,11 @@ _LOGGER = logging.getLogger(__name__)
 
 class TCPBusClient:
     """Wrapper for shared AsyncModbusTcpClient with locking."""
-    def __init__(self, client: AsyncModbusTcpClient, lock: asyncio.Lock):
+    def __init__(self, client: AsyncModbusTcpClient, lock: asyncio.Lock, host: str, port: int):
         self._client = client
         self._lock = lock
+        self.host = host
+        self.port = port
 
     def __getattr__(self, name: str):
         """Proxy calls to the underlying client with locking."""
@@ -23,14 +25,14 @@ class TCPBusClient:
             await self._lock.acquire()
             try:
                 if not self._client.connected:
-                    _LOGGER.debug("Connecting to shared client: %s:%s", self._client.host, self._client.port)
+                    _LOGGER.debug("Connecting to shared client: %s:%s", self.host, self.port)
                     await self._client.connect()
                 return await attr(*args, **kwargs)
             except asyncio.CancelledError:
-                _LOGGER.debug("Modbus request '%s' cancelled for %s:%s", name, self._client.host, self._client.port)
+                _LOGGER.debug("Modbus request '%s' cancelled for %s:%s", name, self.host, self.port)
                 raise
             except Exception as exc:
-                _LOGGER.error("Modbus error during '%s' on %s:%s: %s", name, self._client.host, self._client.port, exc)
+                _LOGGER.error("Modbus error during '%s' on %s:%s: %s", name, self.host, self.port, exc)
                 raise
             finally:
                 try:
@@ -80,7 +82,7 @@ class TCPBusManager:
 
     def get_client(self) -> TCPBusClient:
         """Return a thread-safe wrapper around the shared client."""
-        return TCPBusClient(self._client, self._lock)
+        return TCPBusClient(self._client, self._lock, self.host, self.port)
 
     def attach(self, entry_id: str) -> None:
         self.users.add(entry_id)
