@@ -49,7 +49,11 @@ class RTUBusManager:
             **self._serial_cfg,
         )
 
-        await client.connect()
+        try:
+            await client.connect()
+        except Exception as e:
+            _LOGGER.error("Failed to connect to RTU bus on %s: %s", self.port, e)
+            raise ConnectionError(f"Failed to open RTU port {self.port}") from e
 
         if not client.connected:
             client.close()
@@ -170,6 +174,10 @@ class RTUBusClient:
                 return method
 
             async with self._bus._lock:
-                return await method(*args, **kwargs)
+                try:
+                    return await method(*args, **kwargs)
+                except Exception as e:
+                    _LOGGER.debug("Error during RTU communication: %s", e)
+                    raise
 
         return proxy

@@ -23,8 +23,15 @@ class TCPBusClient:
             await self._lock.acquire()
             try:
                 if not self._client.connected:
+                    _LOGGER.debug("Connecting to shared client: %s:%s", self._client.params.host, self._client.params.port)
                     await self._client.connect()
                 return await attr(*args, **kwargs)
+            except asyncio.CancelledError:
+                _LOGGER.debug("Modbus request '%s' cancelled for %s:%s", name, self._client.params.host, self._client.params.port)
+                raise
+            except Exception as exc:
+                _LOGGER.error("Modbus error during '%s' on %s:%s: %s", name, self._client.params.host, self._client.params.port, exc)
+                raise
             finally:
                 try:
                     # Settle time: Shielded from cancellation to ensure
@@ -39,7 +46,11 @@ class TCPBusClient:
         """Ensure connection is open."""
         async with self._lock:
             if not self._client.connected:
-                await self._client.connect()
+                try:
+                    await self._client.connect()
+                except Exception as e:
+                    _LOGGER.error("Failed to connect to TCP bus: %s", e)
+                    raise
 
     def close(self):
         """Do not close the shared connection directly."""

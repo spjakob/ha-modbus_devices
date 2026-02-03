@@ -168,8 +168,12 @@ class ModbusDevice():
     """ *********** EXTERNAL CALL TO READ ALL DATA ************ """
     """ ******************************************************* """
     async def readData(self):
-        if self.firstRead:      
-            await self._client.connect() 
+        try:
+            if self.firstRead:      
+                await self._client.connect() 
+        except ModbusException as e:
+            _LOGGER.warning("Failed to connect to modbus device: %s", e)
+            raise
 
         self.onBeforeRead()
 
@@ -179,7 +183,8 @@ class ModbusDevice():
                     await self.readGroup(group)
                 elif group.poll_mode == ModbusPollMode.POLL_ONCE and self.firstRead:
                     await self.readGroup(group)
-        except Exception as err:
+        except ModbusException as e:
+            _LOGGER.warning("Modbus read error: %s", e)
             raise
 
         if self.firstRead:   
@@ -210,7 +215,10 @@ class ModbusDevice():
         )
 
         method = self._get_read_method(group.mode)    
-        response = await method(address=start_addr, count=n_reg, device_id=self._slave_id)
+        try:
+            response = await method(address=start_addr, count=n_reg, device_id=self._slave_id)
+        except ModbusException as e:
+            raise ModbusException(f"Error reading group {group}: {e}") from e
 
         # Handle Modbus errors
         if response.isError():
@@ -247,7 +255,10 @@ class ModbusDevice():
         register_count = dp.register_count
 
         method = self._get_read_method(group.mode) 
-        response = await method(address=dp.address, count=register_count, device_id=self._slave_id)
+        try:
+            response = await method(address=dp.address, count=register_count, device_id=self._slave_id)
+        except ModbusException as e:
+            raise ModbusException(f"Error reading value for key '{key}': {e}") from e
 
         # Handle Modbus errors
         if response.isError():
@@ -296,18 +307,21 @@ class ModbusDevice():
         else:
             raise ModbusException(f"Write Value: Unsupported Modbus mode {group.mode!r} for group {group!r}")
 
-        if register_count == 1:
-            response = await method(
-                address=address,
-                value=registers[0],
-                device_id=self._slave_id,
-            )
-        else:
-            response = await method(
-                address=address,
-                values=registers,
-                device_id=self._slave_id,
-            )
+        try:
+            if register_count == 1:
+                response = await method(
+                    address=address,
+                    value=registers[0],
+                    device_id=self._slave_id,
+                )
+            else:
+                response = await method(
+                    address=address,
+                    values=registers,
+                    device_id=self._slave_id,
+                )
+        except ModbusException as e:
+            raise ModbusException(f"Failed to write value for key '{key}': {e}") from e
 
         if response.isError():
             raise ModbusException(f"Failed to write value for key '{key}': {response}")
