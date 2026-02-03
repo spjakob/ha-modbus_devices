@@ -19,10 +19,20 @@ class TCPBusClient:
             return attr
 
         async def wrapper(*args, **kwargs):
-            async with self._lock:
+            # Manual acquire to handle settle time after cancellation
+            await self._lock.acquire()
+            try:
                 if not self._client.connected:
                     await self._client.connect()
                 return await attr(*args, **kwargs)
+            finally:
+                try:
+                    # Settle time: Shielded from cancellation to ensure
+                    # the lock remains held even if HA cancels this task.
+                    # This prevents rapid-fire collisions.
+                    await asyncio.shield(asyncio.sleep(0.2))
+                finally:
+                    self._lock.release()
         return wrapper
 
     async def connect(self):
@@ -37,7 +47,7 @@ class TCPBusClient:
 
 class TCPBusManager:
     """
-    Manages shared statistics for a specific Modbus TCP endpoint (IP:Port).
+    Manages shared statistics and connection for a specific Modbus TCP endpoint (IP:Port).
     """
 
     def __init__(self, *, hass, host: str, port: int) -> None:
@@ -47,7 +57,8 @@ class TCPBusManager:
         self.users: set[str] = set()
 
         # Shared Client and Lock
-        self._client = AsyncModbusTcpClient(host, port=port)
+        # We use a 5s timeout and 0 retries to ensure we fail within HA's update window
+        self._client = AsyncModbusTcpClient(host, port=port, timeout=5, retries=0)
         self._lock = asyncio.Lock()
 
         # Statistics

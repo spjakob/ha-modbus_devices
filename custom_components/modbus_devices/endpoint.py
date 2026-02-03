@@ -10,6 +10,8 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_endpoint(hass, entry):
     """Setup the Modbus Endpoint (RTU or TCP)."""
     hass.data.setdefault(DOMAIN, {}).setdefault("endpoints", {})
+    # Use a shared registry for TCP buses to ensure locking across multiple config entries
+    hass.data[DOMAIN].setdefault("shared_tcp_buses", {})
 
     device_mode = entry.data.get("device_mode")
     bus_manager = None
@@ -17,7 +19,12 @@ async def async_setup_endpoint(hass, entry):
     if device_mode == "tcpip":
         ip = entry.data.get("ip_address")
         port = entry.data.get("port")
-        bus_manager = TCPBusManager(hass=hass, host=ip, port=port)
+        key = f"{ip}:{port}"
+        
+        if key not in hass.data[DOMAIN]["shared_tcp_buses"]:
+            hass.data[DOMAIN]["shared_tcp_buses"][key] = TCPBusManager(hass=hass, host=ip, port=port)
+        
+        bus_manager = hass.data[DOMAIN]["shared_tcp_buses"][key]
     elif device_mode == "rtu":
         port = entry.data.get("serial_port")
         baud = entry.data.get("serial_baud")
