@@ -83,6 +83,11 @@ class ModbusCoordinator(DataUpdateCoordinator):
         self._fast_poll_enabled = False
         self.update_interval = dt.timedelta(seconds=self._normal_poll_interval)
 
+    async def _async_execute_modbus(self, func):
+        """Route Modbus calls through the bus manager lock if available."""
+        if hasattr(self.bus_manager, "execute_with_lock"):
+            return await self.bus_manager.execute_with_lock(func)
+        return await func()
 
     async def _async_update_data(self):
         _LOGGER.debug("Coordinator updating data for: %s", self.devicename) 
@@ -96,7 +101,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
         """ Fetch data """
         try:
             async with async_timeout.timeout(20):
-                await self._modbusDevice.readData()       
+                await self._async_execute_modbus(self._modbusDevice.readData)       
         except Exception as err:
             _LOGGER.warning("Failed to update %s: %s", self.devicename, err)
             raise UpdateFailed from err
@@ -155,7 +160,9 @@ class ModbusCoordinator(DataUpdateCoordinator):
             self.config_value_active._group = ModbusDefaultGroups.CONFIG
             self.config_value_active._key = key
             self.config_value_active._loadEntitySettings()
-            await self._modbusDevice.readValue(ModbusDefaultGroups.CONFIG, key)
+            await self._async_execute_modbus(
+            lambda: self._modbusDevice.readValue(ModbusDefaultGroups.CONFIG, key)
+        )
         finally:
             _LOGGER.debug("Updating!")
             self.config_value_active.async_schedule_update_ha_state()
@@ -184,7 +191,9 @@ class ModbusCoordinator(DataUpdateCoordinator):
     async def write_value(self, group, key, value):
         _LOGGER.debug("Write_Data: %s - %s - %s", group, key, value)
         try:
-            await self._modbusDevice.writeValue(group, key, value)
+            await self._async_execute_modbus(
+                lambda: self._modbusDevice.writeValue(group, key, value)
+            )
         except Exception as exc:
             _LOGGER.error("Failed to write value '%s' to key '%s' in group '%s': %s", value, key, group, exc, exc_info=exc)
             raise

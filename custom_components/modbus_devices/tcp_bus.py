@@ -1,5 +1,7 @@
 from __future__ import annotations
 import logging
+import asyncio
+import time
 from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
@@ -14,6 +16,7 @@ class TCPBusManager:
         self.host = host
         self.port = port
         self.users: set[str] = set()
+        self.lock = asyncio.Lock()
 
         # Statistics
         self.tx_packets = 0
@@ -34,3 +37,20 @@ class TCPBusManager:
         self.rx_packets += 1
         self.tx_bits += tx_bytes * 8
         self.rx_bits += rx_bytes * 8
+
+    async def execute_with_lock(self, func):
+        """Execute a Modbus operation with exclusive access and congestion monitoring."""
+        start_wait = time.monotonic()
+        async with self.lock:
+            wait_time = time.monotonic() - start_wait
+            if wait_time > 0.2:
+                _LOGGER.warning(
+                    "TCP Bus (%s:%s) Congestion: Waited %.3fs for lock.",
+                    self.host, self.port, wait_time
+                )
+            elif wait_time > 0.05:
+                _LOGGER.debug(
+                    "TCP Bus (%s:%s) Busy: Waited %.3fs for lock.",
+                    self.host, self.port, wait_time
+                )
+            return await func()
