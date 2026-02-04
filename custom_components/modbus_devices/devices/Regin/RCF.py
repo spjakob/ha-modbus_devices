@@ -28,7 +28,7 @@ GROUP_DEVICE_INFO = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
 GROUP_SENSORS = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_SENSORS_SUPPLY = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_CONTROL = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
-GROUP_CONFIG_ADV = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_LOW)
+GROUP_CONFIG_ADV = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
 
 class Device(ModbusDevice):
     """Representation of a Regin RCF Modbus device."""
