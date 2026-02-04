@@ -60,7 +60,7 @@ class Device(ModbusDevice):
                     deviceClass=SensorDeviceClass.DISTANCE,
                     units=UnitOfLength.METERS,
                     icon="mdi:arrow-expand-horizontal",
-                    entity_category=EntityCategory.DIAGNOSTIC
+                    category=EntityCategory.DIAGNOSTIC
                 )
             ),
             "Pressure": ModbusDatapoint(
