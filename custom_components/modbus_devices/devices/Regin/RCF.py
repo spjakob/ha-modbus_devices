@@ -26,7 +26,9 @@ _LOGGER = logging.getLogger(__name__)
 # Define groups
 GROUP_DEVICE_INFO = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
 GROUP_SENSORS = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_SENSORS_SUPPLY = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_CONTROL = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
+GROUP_CONFIG_ADV = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_LOW)
 
 class Device(ModbusDevice):
     """Representation of a Regin RCF Modbus device."""
@@ -175,6 +177,10 @@ class Device(ModbusDevice):
                     units=PERCENTAGE
                 )
             ),
+        }
+
+        # SENSORS SUPPLY - Read (Input Registers Function 04)
+        self.Datapoints[GROUP_SENSORS_SUPPLY] = {
             "Supply air temperature": ModbusDatapoint(
                 address=47,
                 scaling=0.1,
@@ -243,17 +249,6 @@ class Device(ModbusDevice):
 
         # CONFIGURATION - Read/Write (Holding Registers Function 03)
         self.Datapoints[ModbusDefaultGroups.CONFIG] = {
-            "Basic Setpoint": ModbusDatapoint(
-                address=284,
-                scaling=0.1,
-                entity_data=EntityDataNumber(
-                    deviceClass=NumberDeviceClass.TEMPERATURE,
-                    units=UnitOfTemperature.CELSIUS,
-                    min_value=10,
-                    max_value=35,
-                    step=0.1
-                )
-            ),
             "Change-over Select": ModbusDatapoint(
                 address=13,
                 entity_data=EntityDataSelect(
@@ -365,6 +360,21 @@ class Device(ModbusDevice):
                     },
                     category=EntityCategory.CONFIG,
                 ),
+            ),
+        }
+
+        # CONFIGURATION ADVANCED - Read/Write (Holding Registers Function 03)
+        self.Datapoints[GROUP_CONFIG_ADV] = {
+            "Basic Setpoint": ModbusDatapoint(
+                address=284,
+                scaling=0.1,
+                entity_data=EntityDataNumber(
+                    deviceClass=NumberDeviceClass.TEMPERATURE,
+                    units=UnitOfTemperature.CELSIUS,
+                    min_value=10,
+                    max_value=35,
+                    step=0.1
+                )
             ),
         }
 
