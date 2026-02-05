@@ -6,18 +6,20 @@ from ..datatypes import ModbusDatapoint, ModbusGroup
 from ..datatypes import EntityDataSensor, EntityDataSelect, EntityDataNumber, EntityDataButton
 
 from homeassistant.helpers.entity import EntityCategory
-from homeassistant.const import UnitOfLength, UnitOfPressure, UnitOfTemperature, UnitOfVolume
+from homeassistant.const import UnitOfLength
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 
 _LOGGER = logging.getLogger(__name__)
 
-# GROUP_LIVE: Dynamic values, polled frequently
-GROUP_LIVE = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
+# --------------------------------------------------------------------------------------
+# 1. SPLIT GROUPS
+# --------------------------------------------------------------------------------------
+GROUP_LIVE_1 = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
+GROUP_LIVE_2 = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
 
-# GROUP_SETTINGS: Static configuration, read ONLY ONCE at startup
-GROUP_SETTINGS = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
+GROUP_SETTINGS_1 = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
+GROUP_SETTINGS_2 = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
 
-# GROUP_ACTIONS: Write-only buttons, never polled
 GROUP_ACTIONS = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_OFF)
 
 class Device(ModbusDevice):
@@ -25,35 +27,11 @@ class Device(ModbusDevice):
     model = "QDY30A"
 
     def loadDatapoints(self):
-        # --- LIVE SENSORS ---
-        self.Datapoints[GROUP_LIVE] = {
-            "Water Level": ModbusDatapoint(
-                address=4,
-                scaling=0.001, # Default fallback
-                entity_data=EntityDataSensor(
-                    deviceClass=SensorDeviceClass.DISTANCE,
-                    stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfLength.METERS,
-                    icon="mdi:ruler",
-                    precision=3
-                )
-            ),
-            "Water Level (Float)": ModbusDatapoint(
-                address=22,
-                register_count=2,
-                type=ModbusDataType.FLOAT,
-                entity_data=EntityDataSensor(
-                    deviceClass=SensorDeviceClass.DISTANCE,
-                    stateClass=SensorStateClass.MEASUREMENT,
-                    units=UnitOfLength.METERS,
-                    icon="mdi:ruler-square",
-                    category=EntityCategory.DIAGNOSTIC
-                )
-            ),
-        }
-
-        # --- CONFIGURATION ---
-        self.Datapoints[GROUP_SETTINGS] = {
+        # ------------------------------------------------------------------
+        # STEP 1: DEFINE SETTINGS
+        # ------------------------------------------------------------------
+        self.Datapoints[GROUP_SETTINGS_1] = {
+            # --- WRITABLE (Allowed by Datasheet Sec 5) ---
             "Device Slave ID": ModbusDatapoint(
                 address=0,
                 entity_data=EntityDataNumber(
@@ -73,6 +51,45 @@ class Device(ModbusDevice):
                     icon="mdi:serial-port"
                 )
             ),
+            
+            # --- READ ONLY (Calibration Data - Datasheet Sec 6) ---
+            "Measurement Unit": ModbusDatapoint(
+                address=2,
+                entity_data=EntityDataSensor(
+                    category=EntityCategory.DIAGNOSTIC,
+                    icon="mdi:scale",
+                    # Use 'enum' to map integer values to strings for display
+                    enum={
+                        0: "MPa", 1: "kPa", 2: "Pa", 3: "bar", 4: "mbar",
+                        5: "kg/cm2", 6: "PSI", 7: "mH2O", 8: "mmH2O",
+                        16: "m", 17: "cm", 18: "mm", 20: "°C", 23: "Empty"
+                    }
+                )
+            ),
+            "Decimal Point Position": ModbusDatapoint(
+                address=3,
+                entity_data=EntityDataSensor(
+                    category=EntityCategory.DIAGNOSTIC,
+                    icon="mdi:decimal",
+                    enum={0: "x1", 1: "x0.1", 2: "x0.01", 3: "x0.001"}
+                )
+            ),
+            "Zero Point": ModbusDatapoint(
+                address=5,
+                entity_data=EntityDataSensor(
+                    category=EntityCategory.DIAGNOSTIC,
+                    icon="mdi:arrow-collapse-down"
+                )
+            ),
+            "Full Scale Range": ModbusDatapoint(
+                address=6,
+                entity_data=EntityDataSensor(
+                    category=EntityCategory.DIAGNOSTIC,
+                    icon="mdi:arrow-expand-up"
+                )
+            ),
+            
+            # --- WRITABLE (Allowed by Datasheet Sec 5) ---
             "Zero Offset": ModbusDatapoint(
                 address=12,
                 entity_data=EntityDataNumber(
@@ -81,6 +98,10 @@ class Device(ModbusDevice):
                     icon="mdi:align-vertical-bottom"
                 )
             ),
+        }
+
+        self.Datapoints[GROUP_SETTINGS_2] = {
+            # --- WRITABLE (Allowed by Datasheet Sec 5 - "Check Bit") ---
             "Parity": ModbusDatapoint(
                 address=37,
                 entity_data=EntityDataSelect(
@@ -89,45 +110,45 @@ class Device(ModbusDevice):
                     icon="mdi:check-network-outline"
                 )
             ),
+        }
 
-            # --- DIAGNOSTICS ---
-            "Measurement Unit": ModbusDatapoint(
-                address=2,
-                entity_data=EntityDataSelect(
-                    category=EntityCategory.DIAGNOSTIC,
-                    options={
-                        0: "MPa", 1: "kPa", 2: "Pa", 3: "bar", 4: "mbar",
-                        5: "kg/cm2", 6: "PSI", 7: "mH2O", 8: "mmH2O",
-                        16: "m", 17: "cm", 18: "mm", 20: "°C", 23: "Empty"
-                    },
-                    icon="mdi:scale"
+        # ------------------------------------------------------------------
+        # STEP 2: DEFINE LIVE SENSORS
+        # ------------------------------------------------------------------
+        self.Datapoints[GROUP_LIVE_1] = {
+            "Water Level": ModbusDatapoint(
+                address=4,
+                # Scaling defaults to 1.0 (Fixed in onAfterFirstRead)
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.DISTANCE,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfLength.METERS,
+                    icon="mdi:ruler",
+                    precision=3
                 )
             ),
-            "Decimal Point Position": ModbusDatapoint(
-                address=3,
-                entity_data=EntityDataSelect(
-                    category=EntityCategory.DIAGNOSTIC,
-                    options={0: "x1", 1: "x0.1", 2: "x0.01", 3: "x0.001"},
-                    icon="mdi:decimal"
-                )
-            ),
-            "Zero Point": ModbusDatapoint(
-                address=5,
-                entity_data=EntityDataNumber(
-                    category=EntityCategory.DIAGNOSTIC,
-                    icon="mdi:arrow-collapse-down"
-                )
-            ),
-            "Full Scale Range": ModbusDatapoint(
-                address=6,
-                entity_data=EntityDataNumber(
-                    category=EntityCategory.DIAGNOSTIC,
-                    icon="mdi:arrow-expand-up"
+        }
+        
+        self.Datapoints[GROUP_LIVE_2] = {
+            "Water Level (Float)": ModbusDatapoint(
+                address=22,
+                register_count=2,
+                type=ModbusDataType.FLOAT,
+                # Scaling defaults to 1.0 (Fixed in onAfterFirstRead)
+                entity_data=EntityDataSensor(
+                    deviceClass=SensorDeviceClass.DISTANCE,
+                    stateClass=SensorStateClass.MEASUREMENT,
+                    units=UnitOfLength.METERS,
+                    icon="mdi:ruler-square",
+                    precision=3,
+                    category=EntityCategory.DIAGNOSTIC
                 )
             ),
         }
 
-        # --- ACTIONS ---
+        # ------------------------------------------------------------------
+        # STEP 3: ACTIONS
+        # ------------------------------------------------------------------
         self.Datapoints[GROUP_ACTIONS] = {
             "Save Settings": ModbusDatapoint(
                 address=15,
@@ -145,34 +166,61 @@ class Device(ModbusDevice):
         static config registers read during startup.
         """
         try:
-            dp_unit = self.Datapoints[GROUP_SETTINGS].get("Measurement Unit")
-            dp_dec = self.Datapoints[GROUP_SETTINGS].get("Decimal Point Position")
-            dp_level = self.Datapoints[GROUP_LIVE].get("Water Level")
+            dp_unit = self.Datapoints[GROUP_SETTINGS_1].get("Measurement Unit")
+            dp_dec = self.Datapoints[GROUP_SETTINGS_1].get("Decimal Point Position")
+            
+            dp_level = self.Datapoints[GROUP_LIVE_1].get("Water Level")
+            dp_level_float = self.Datapoints[GROUP_LIVE_2].get("Water Level (Float)")
 
-            if dp_unit and dp_dec and dp_level and dp_unit.value is not None and dp_dec.value is not None:
+            if dp_unit and dp_dec and dp_unit.value is not None and dp_dec.value is not None:
+                # Value will now be the string from the enum (e.g. "cm"), so we map it back or handle it.
+                # However, dp.value usually holds the internal value. 
+                # Wait, EntityDataSensor transforms output for HA, but dp.value in modbus_devices usually stores the raw/processed numeric value.
+                # Let's assume dp.value is the raw integer (e.g. 17) because formatting happens in the Entity, not the Datapoint.
+                # If your integration converts it immediately to string in dp.value, this logic needs adjustment.
+                # Based on `datatypes.py` -> `from_modbus`:
+                # It sets `self.value`. It does NOT apply the enum map there. The Entity applies the enum.
+                # So `dp_unit.value` IS the integer (17). Safe to proceed.
+                
                 unit_val = int(dp_unit.value)
                 dec_val = int(dp_dec.value)
 
-                # 1. Decimal Multiplier (0=x1 ... 3=x0.001)
+                # 1. Decimal Multiplier
                 decimal_multipliers = {0: 1.0, 1: 0.1, 2: 0.01, 3: 0.001}
                 base_mult = decimal_multipliers.get(dec_val, 0.001)
 
                 # 2. Unit Multiplier (Convert to Meters)
-                # 16=m, 17=cm, 18=mm
                 unit_multipliers = {
                     16: 1.0,    # m
                     17: 0.01,   # cm
                     18: 0.001   # mm
                 }
 
-                # 3. Apply
+                # 3. Apply Scaling
                 if unit_val in unit_multipliers:
                     unit_mult = unit_multipliers[unit_val]
-                    final_scaling = base_mult * unit_mult
-                    dp_level.scaling = final_scaling
-                    _LOGGER.info("QDY30A: Auto-detected scaling: %s (Unit ID: %s, Dec ID: %s)", final_scaling, unit_val, dec_val)
+                    
+                    # A) Integer Sensor
+                    if dp_level:
+                        new_scale = base_mult * unit_mult
+                        dp_level.scaling = new_scale
+                        
+                        # Fix value (Current value is RAW * 1.0, so just multiply by new scale)
+                        if isinstance(dp_level.value, (int, float)):
+                             dp_level.value = dp_level.value * new_scale
+                        
+                    # B) Float Sensor
+                    if dp_level_float:
+                        new_scale = unit_mult
+                        dp_level_float.scaling = new_scale
+                        
+                        # Fix value (Current value is RAW * 1.0, so just multiply by new scale)
+                        if isinstance(dp_level_float.value, (int, float)):
+                            dp_level_float.value = dp_level_float.value * new_scale
+
+                    _LOGGER.info("QDY30A: Auto-detected scaling: %s (Unit ID: %s, Dec ID: %s). Value corrected.", unit_mult, unit_val, dec_val)
                 else:
-                    _LOGGER.warning("QDY30A: Unknown Unit ID %s. Scaling defaults to 0.001 (mm)", unit_val)
+                    _LOGGER.warning("QDY30A: Unknown Unit ID %s.", unit_val)
 
         except Exception as e:
             _LOGGER.error("QDY30A: Startup scaling calc failed: %s", e)
