@@ -30,6 +30,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "packets", "packets"))
         entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "bits", "bits"))
         entities.append(ModbusEndpointRateSensor(bus_manager, config_entry))
+        entities.append(ModbusEndpointUtilizationSensor(bus_manager, config_entry))
+        entities.append(ModbusEndpointQueueSensor(bus_manager, config_entry))
         entities.append(ModbusEndpointHealthSensor(bus_manager, config_entry, hass))
         async_add_entities(entities, False)
         return
@@ -308,6 +310,8 @@ class ModbusEndpointHealthSensor(SensorEntity):
             "modbus_exceptions_total": traffic.exceptions,
             "connection_errors_total": traffic.connection_errors,
             "last_error_type": traffic.last_error_type,
+            "bus_utilization_percent": getattr(self.bus_manager, "utilization_percent", 0.0),
+            "queue_depth": getattr(self.bus_manager, "queue_depth", 0),
             "error_summary": {
                 "timeouts": traffic.timeouts,
                 "crc_errors": traffic.crc_errors,
@@ -323,3 +327,76 @@ class ModbusEndpointHealthSensor(SensorEntity):
     @property
     def should_poll(self) -> bool:
         return True
+
+
+class ModbusEndpointUtilizationSensor(SensorEntity):
+    """Sensor for tracking bus utilization percentage for an endpoint."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_has_entity_name = True
+    _attr_native_unit_of_measurement = "%"
+    _attr_name = "Bus Utilization"
+    _attr_icon = "mdi:gauge"
+
+    def __init__(self, bus_manager, config_entry):
+        self.bus_manager = bus_manager
+        self._unique_id = f"{config_entry.entry_id}_bus_utilization"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry.entry_id)},
+            name=config_entry.title,
+            manufacturer="Modbus Endpoint",
+            model="Bus Statistics",
+        )
+
+    @property
+    def unique_id(self):
+        return self._unique_id
+
+    @property
+    def native_value(self):
+        return getattr(self.bus_manager, "utilization_percent", 0.0)
+
+    @property
+    def should_poll(self) -> bool:
+        return True
+
+    @property
+    def available(self) -> bool:
+        return True
+
+
+class ModbusEndpointQueueSensor(SensorEntity):
+    """Sensor for tracking current request queue depth for an endpoint."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_has_entity_name = True
+    _attr_native_unit_of_measurement = "requests"
+    _attr_name = "Bus Queue Depth"
+    _attr_icon = "mdi:tray-full"
+
+    def __init__(self, bus_manager, config_entry):
+        self.bus_manager = bus_manager
+        self._unique_id = f"{config_entry.entry_id}_queue_depth"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry.entry_id)},
+            name=config_entry.title,
+            manufacturer="Modbus Endpoint",
+            model="Bus Statistics",
+        )
+
+    @property
+    def unique_id(self):
+        return self._unique_id
+
+    @property
+    def native_value(self):
+        return getattr(self.bus_manager, "queue_depth", 0)
+
+    @property
+    def should_poll(self) -> bool:
+        return True
+
+    @property
+    def available(self) -> bool:
+        return True
+

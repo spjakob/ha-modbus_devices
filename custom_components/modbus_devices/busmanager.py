@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import collections
 import logging
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable
 from pymodbus.client import AsyncModbusSerialClient, AsyncModbusTcpClient
@@ -24,13 +26,72 @@ _LOGGER = logging.getLogger(__name__)
 
 
 # ============================================================================
+# Bus utilization tracker
+# ============================================================================
+class BusUtilizationTracker:
+    """Tracks bus utilization (% time busy) over a sliding time window."""
+
+    def __init__(self, window_seconds: float = 60.0) -> None:
+        self.window_seconds = window_seconds
+        self._history: collections.deque[tuple[float, float]] = collections.deque()  # (end_time, duration)
+        self._current_busy_start: float | None = None
+
+    def start_busy(self) -> None:
+        if self._current_busy_start is None:
+            self._current_busy_start = time.monotonic()
+
+    def end_busy(self) -> None:
+        if self._current_busy_start is not None:
+            now = time.monotonic()
+            duration = max(0.0, now - self._current_busy_start)
+            self._history.append((now, duration))
+            self._current_busy_start = None
+            self._cleanup(now)
+
+    def _cleanup(self, now: float) -> None:
+        cutoff = now - self.window_seconds
+        while self._history and self._history[0][0] < cutoff:
+            self._history.popleft()
+
+    @property
+    def utilization_percent(self) -> float:
+        """Calculate bus utilization percentage over the sliding window."""
+        now = time.monotonic()
+        self._cleanup(now)
+        total_busy = 0.0
+        cutoff = now - self.window_seconds
+
+        for end_time, duration in self._history:
+            start_time = end_time - duration
+            if start_time < cutoff:
+                total_busy += max(0.0, end_time - cutoff)
+            else:
+                total_busy += duration
+
+        if self._current_busy_start is not None:
+            current_start = max(self._current_busy_start, cutoff)
+            total_busy += max(0.0, now - current_start)
+
+        pct = (total_busy / self.window_seconds) * 100.0
+        return min(100.0, max(0.0, round(pct, 1)))
+
+
+# ============================================================================
 # Base bus manager
 # ============================================================================
 class BaseBusManager(ABC):
-    def __init__(self) -> None:
+    def __init__(self, queue_timeout: float = 20.0, turnaround_delay: float = 0.02) -> None:
         self._lock = asyncio.Lock()
         self._client = None
         self._users: set[str] = set()
+
+        # Queue tracking & turnaround configuration
+        self._waiting_count: int = 0
+        self.queue_timeout: float = queue_timeout
+        self._turnaround_delay: float = turnaround_delay
+
+        # Utilization tracking
+        self._utilization_tracker = BusUtilizationTracker(window_seconds=60.0)
 
         # Traffic statistics
         self.traffic = ModbusTrafficStats()              # bus-level
@@ -80,6 +141,16 @@ class BaseBusManager(ABC):
     @property
     def devices_traffic(self) -> dict[int, ModbusTrafficStats]:
         return self._device_traffic
+
+    @property
+    def queue_depth(self) -> int:
+        """Return the number of requests currently waiting in queue for the bus lock."""
+        return self._waiting_count
+
+    @property
+    def utilization_percent(self) -> float:
+        """Return the bus utilization percentage over the sliding 60-second window."""
+        return self._utilization_tracker.utilization_percent
 
     # ------------------------------------------------------------------
     # Device registration
@@ -192,41 +263,88 @@ class BaseBusManager(ABC):
         return "unknown"
 
     async def execute(self, slave_id: int, func: Callable[..., Any], *args, **kwargs) -> Any:
-        """Execute a Modbus call with locking and slave context."""
+        """Execute a Modbus call with queue management, cancellation shielding, and slave context."""
         await self.async_start()
 
-        async with self._lock:
-            self._active_slave = slave_id
-            try:
-                result = await func(*args, **kwargs)
-                if hasattr(result, "isError") and result.isError():
-                    err_type = self._classify_error(result)
-                    self.traffic.record_error(err_type)
-                    stats = self._device_traffic.get(slave_id)
-                    if stats:
-                        stats.record_error(err_type)
-                else:
-                    self.traffic.record_success()
-                    stats = self._device_traffic.get(slave_id)
-                    if stats:
-                        stats.record_success()
-                return result
-            except Exception as e:
-                err_type = self._classify_error(e)
-                # Record error at bus level
+        # 1. Wait for bus lock with a queue timeout
+        self._waiting_count += 1
+        try:
+            await asyncio.wait_for(self._lock.acquire(), timeout=self.queue_timeout)
+        except asyncio.TimeoutError:
+            _LOGGER.warning(
+                "Bus queue timeout: Device (Slave %s) waited more than %.1fs for bus lock. "
+                "Dropping request to relieve bus congestion.",
+                slave_id, self.queue_timeout
+            )
+            self.traffic.record_error("timeout")
+            stats = self._device_traffic.get(slave_id)
+            if stats:
+                stats.record_error("timeout")
+            raise TimeoutError(f"Bus queue timeout for slave {slave_id} after {self.queue_timeout}s")
+        finally:
+            self._waiting_count -= 1
+
+        # 2. Lock is acquired: execute the wire transaction shielded against cancellation
+        self._utilization_tracker.start_busy()
+        self._active_slave = slave_id
+        try:
+            coro_or_val = func(*args, **kwargs)
+            if asyncio.iscoroutine(coro_or_val) or isinstance(coro_or_val, asyncio.Future):
+                wire_task = asyncio.ensure_future(coro_or_val)
+                try:
+                    result = await asyncio.shield(wire_task)
+                except asyncio.CancelledError:
+                    _LOGGER.warning(
+                        "Request for Slave %s was cancelled by caller while active on bus. "
+                        "Shielding transaction until physical wire is clear...",
+                        slave_id
+                    )
+                    try:
+                        await wire_task
+                    except Exception as wire_err:
+                        _LOGGER.debug("Shielded transaction for Slave %s completed with: %s", slave_id, wire_err)
+                    raise
+            else:
+                result = coro_or_val
+
+            if hasattr(result, "isError") and result.isError():
+                err_type = self._classify_error(result)
                 self.traffic.record_error(err_type)
-                
-                # Record error at device level if known
                 stats = self._device_traffic.get(slave_id)
                 if stats:
                     stats.record_error(err_type)
+            else:
+                self.traffic.record_success()
+                stats = self._device_traffic.get(slave_id)
+                if stats:
+                    stats.record_success()
+            return result
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            err_type = self._classify_error(e)
+            # Record error at bus level
+            self.traffic.record_error(err_type)
+            
+            # Record error at device level if known
+            stats = self._device_traffic.get(slave_id)
+            if stats:
+                stats.record_error(err_type)
 
-                # Re-raise so the device/coordinator sees the exception
-                raise
-            finally:
-                self._active_slave = None
+            # Re-raise so the device/coordinator sees the exception
+            raise
+        finally:
+            self._active_slave = None
+            self._utilization_tracker.end_busy()
+            try:
                 # Small inter-frame delay to ensure RS485 bus quiet time (turnaround)
-                await asyncio.sleep(0.02)   
+                if self._turnaround_delay > 0:
+                    try:
+                        await asyncio.sleep(self._turnaround_delay)
+                    except asyncio.CancelledError:
+                        pass
+            finally:
+                self._lock.release()
 
 
 # ============================================================================
@@ -235,8 +353,19 @@ class BaseBusManager(ABC):
 class RTUBusManager(BaseBusManager):
     """Shared Modbus RTU serial bus."""
 
-    def __init__(self, *, port: str, baudrate: int, parity: str='N', stopbits: int=1, timeout: float=3, retries: int=0) -> None:
-        super().__init__()
+    def __init__(
+        self,
+        *,
+        port: str,
+        baudrate: int,
+        parity: str = 'N',
+        stopbits: int = 1,
+        timeout: float = 3,
+        retries: int = 0,
+        queue_timeout: float = 20.0,
+        turnaround_delay: float = 0.02,
+    ) -> None:
+        super().__init__(queue_timeout=queue_timeout, turnaround_delay=turnaround_delay)
 
         self.port = port
         self.retries = retries
@@ -287,8 +416,17 @@ class RTUBusManager(BaseBusManager):
 class TCPBusManager(BaseBusManager):
     """Shared Modbus TCP connection."""
 
-    def __init__(self, *, host: str, port: int, timeout: float=3, retries: int=0) -> None:
-        super().__init__()
+    def __init__(
+        self,
+        *,
+        host: str,
+        port: int,
+        timeout: float = 3,
+        retries: int = 0,
+        queue_timeout: float = 20.0,
+        turnaround_delay: float = 0.005,
+    ) -> None:
+        super().__init__(queue_timeout=queue_timeout, turnaround_delay=turnaround_delay)
         self.host = host
         self.port = port
         self.timeout = timeout

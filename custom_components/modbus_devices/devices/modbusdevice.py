@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+from typing import Any
 
 from enum import Enum
 from homeassistant.helpers.entity import EntityCategory
