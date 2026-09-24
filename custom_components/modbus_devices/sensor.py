@@ -112,9 +112,9 @@ class ModbusDeviceCounterSensor(SensorEntity):
     def native_value(self):
         device = self.coordinator._modbusDevice
         if self._counter_type == 'packets':
-            return device.device_traffic.tx_count + device.device_traffic.rx_count
+            return device.traffic.tx_count + device.traffic.rx_count
         elif self._counter_type == 'bits':
-            return device.device_traffic.tx_bytes * 8 + device.device_traffic.rx_bytes * 8
+            return (device.traffic.tx_bytes + device.traffic.rx_bytes) * 8
         return 0
 
     @property

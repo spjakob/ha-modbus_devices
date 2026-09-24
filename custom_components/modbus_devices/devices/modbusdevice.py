@@ -42,6 +42,25 @@ class ModbusDevice():
 
         self.firstRead = True
 
+    # ------------------------------------------------------------------
+    # Backward compatibility properties for device statistics
+    # ------------------------------------------------------------------
+    @property
+    def device_tx_packets(self) -> int:
+        return self.traffic.tx_count
+
+    @property
+    def device_rx_packets(self) -> int:
+        return self.traffic.rx_count
+
+    @property
+    def device_tx_bits(self) -> int:
+        return self.traffic.tx_bytes * 8
+
+    @property
+    def device_rx_bits(self) -> int:
+        return self.traffic.rx_bytes * 8
+
 
     def close(self):
         """Close the underlying client safely."""

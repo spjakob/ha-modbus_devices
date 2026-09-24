@@ -28,6 +28,25 @@ class BaseBusManager(ABC):
         self._active_slave: int | None = None
 
     # ------------------------------------------------------------------
+    # Backward compatibility properties for endpoint statistics
+    # ------------------------------------------------------------------
+    @property
+    def tx_packets(self) -> int:
+        return self.traffic.tx_count
+
+    @property
+    def rx_packets(self) -> int:
+        return self.traffic.rx_count
+
+    @property
+    def tx_bits(self) -> int:
+        return self.traffic.tx_bytes * 8
+
+    @property
+    def rx_bits(self) -> int:
+        return self.traffic.rx_bytes * 8
+
+    # ------------------------------------------------------------------
     # Device registration
     # ------------------------------------------------------------------
 
