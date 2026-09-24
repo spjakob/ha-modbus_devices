@@ -82,6 +82,7 @@ class BusUtilizationTracker:
 class BaseBusManager(ABC):
     def __init__(self, queue_timeout: float = 20.0, turnaround_delay: float = 0.02) -> None:
         self._lock = asyncio.Lock()
+        self._connect_lock = asyncio.Lock()
         self._client = None
         self._users: set[str] = set()
 
@@ -381,25 +382,30 @@ class RTUBusManager(BaseBusManager):
         if self._client is not None:
             return
 
-        _LOGGER.debug("Opening Modbus RTU bus on %s", self.port)
+        async with self._connect_lock:
+            if self._client is not None:
+                return
 
-        client = AsyncModbusSerialClient(port=self.port, **self._serial_cfg, trace_packet=self._bus_packet_trace)
+            _LOGGER.debug("Opening Modbus RTU bus on %s", self.port)
 
-        await client.connect()
+            client = AsyncModbusSerialClient(port=self.port, **self._serial_cfg, trace_packet=self._bus_packet_trace)
 
-        if not client.connected:
-            client.close()
-            raise ConnectionError(f"Failed to open RTU port {self.port}")
+            await client.connect()
 
-        self._client = client
+            if not client.connected:
+                client.close()
+                raise ConnectionError(f"Failed to open RTU port {self.port}")
+
+            self._client = client
 
     async def async_stop(self) -> None:
-        if self._client is None:
-            return
+        async with self._connect_lock:
+            if self._client is None:
+                return
 
-        _LOGGER.debug("Closing Modbus RTU bus on %s", self.port)
-        self._client.close()
-        self._client = None
+            _LOGGER.debug("Closing Modbus RTU bus on %s", self.port)
+            self._client.close()
+            self._client = None
 
     def matches_serial_config(self, *, baudrate: int, parity: str='N', stopbits: int=1, timeout: float, **kwargs) -> bool:
         return (
@@ -436,34 +442,39 @@ class TCPBusManager(BaseBusManager):
         if self._client is not None:
             return
 
-        _LOGGER.debug("Opening Modbus TCP bus %s:%s", self.host, self.port)
+        async with self._connect_lock:
+            if self._client is not None:
+                return
 
-        client = AsyncModbusTcpClient(
-            host=self.host,
-            port=self.port,
-            timeout=self.timeout,
-            retries=self.retries,
-            trace_packet=self._bus_packet_trace
-        )
+            _LOGGER.debug("Opening Modbus TCP bus %s:%s", self.host, self.port)
 
-        await client.connect()
-
-        if not client.connected:
-            client.close()
-            raise ConnectionError(
-                f"Failed to connect to Modbus TCP {self.host}:{self.port}"
+            client = AsyncModbusTcpClient(
+                host=self.host,
+                port=self.port,
+                timeout=self.timeout,
+                retries=self.retries,
+                trace_packet=self._bus_packet_trace
             )
 
-        self._client = client
-        _LOGGER.debug("Created client!")
+            await client.connect()
+
+            if not client.connected:
+                client.close()
+                raise ConnectionError(
+                    f"Failed to connect to Modbus TCP {self.host}:{self.port}"
+                )
+
+            self._client = client
+            _LOGGER.debug("Created client!")
 
     async def async_stop(self) -> None:
-        if self._client is None:
-            return
+        async with self._connect_lock:
+            if self._client is None:
+                return
 
-        _LOGGER.debug("Closing Modbus TCP bus %s:%s", self.host, self.port)
-        self._client.close()
-        self._client = None
+            _LOGGER.debug("Closing Modbus TCP bus %s:%s", self.host, self.port)
+            self._client.close()
+            self._client = None
 
 
 # ============================================================================
