@@ -29,17 +29,17 @@ from homeassistant.helpers.entity import EntityCategory
 _LOGGER = logging.getLogger(__name__)
 
 # Define groups
-GROUP_INPUT_1 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_2 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_3 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_NEUTRAL = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_THD_PHASE = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_THD_AVG = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_DEMAND = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_THD_LINE = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_ENERGY = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_HOLDING_RESET = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
-GROUP_HOLDING_INFO = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
+GROUP_INPUT_1 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON, name="MAIN_MEASUREMENTS")
+GROUP_INPUT_2 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON, name="DEMAND_VA_CURRENT")
+GROUP_INPUT_3 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON, name="VOLTS_LINE_TO_LINE")
+GROUP_INPUT_NEUTRAL = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON, name="NEUTRAL_CURRENT")
+GROUP_INPUT_THD_PHASE = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON, name="THD_PHASE")
+GROUP_INPUT_THD_AVG = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON, name="THD_AVG")
+GROUP_INPUT_DEMAND = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON, name="DEMAND_CURRENT")
+GROUP_INPUT_THD_LINE = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON, name="THD_LINE")
+GROUP_INPUT_ENERGY = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON, name="ENERGY")
+GROUP_HOLDING_RESET = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE, name="RESET")
+GROUP_HOLDING_INFO = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE, name="INFO")
 
 class Device(ModbusDevice):
     """Representation of an Eastron SDM630 Modbus device."""

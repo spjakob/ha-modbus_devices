@@ -13,20 +13,22 @@ async def async_setup_endpoint(hass, entry):
     device_mode = entry.data.get("device_mode")
     bus_manager = None
 
+    # Default 2.0s timeout gives RS485 devices adequate time to respond without false timeouts
+    endpoint_timeout = float(entry.data.get("timeout", entry.options.get("timeout", 2.0)))
+
     if device_mode == "tcpip":
         ip = entry.data.get("ip_address")
         port = entry.data.get("port")
-        bus_manager = TCPBusManager(host=ip, port=port, timeout=0.5, retries=0)
+        bus_manager = TCPBusManager(host=ip, port=port, timeout=endpoint_timeout, retries=0)
     elif device_mode == "rtu":
         port = entry.data.get("serial_port")
         baud = entry.data.get("serial_baud")
-        # Default settings with 0.5s timeout for fast recovery and 0 retries
         bus_manager = RTUBusManager(
             port=port,
             baudrate=baud,
             parity="N",
             stopbits=1,
-            timeout=0.5,
+            timeout=endpoint_timeout,
             retries=0,
         )
     else:

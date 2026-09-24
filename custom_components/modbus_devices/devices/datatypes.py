@@ -50,16 +50,30 @@ class EntityDataButton(EntityData):
 ###### DATA TYPES FOR MODBUS FUNCTIONALITY ######
 ################################################
 class ModbusGroup:
-    def __init__(self, mode: ModbusMode, poll_mode: ModbusPollMode):
+    def __init__(self, mode: ModbusMode, poll_mode: ModbusPollMode, name: str = ""):
         # Initialize mode and poll_mode
         self.mode = mode
         self.poll_mode = poll_mode
+        self.name = name
         # Generate a unique ID automatically when the instance is created
         self._unique_id = str(uuid.uuid4())
 
     @property
     def unique_id(self):
         return self._unique_id  # Return the auto-generated unique ID
+
+    def __repr__(self) -> str:
+        name_str = f" '{self.name}'" if self.name else ""
+        mode_name = self.mode.name if hasattr(self.mode, "name") else str(self.mode)
+        poll_name = self.poll_mode.name if hasattr(self.poll_mode, "name") else str(self.poll_mode)
+        return f"<ModbusGroup{name_str} mode={mode_name} poll={poll_name}>"
+
+    def __str__(self) -> str:
+        if self.name:
+            return self.name
+        mode_name = self.mode.name if hasattr(self.mode, "name") else str(self.mode)
+        poll_name = self.poll_mode.name if hasattr(self.poll_mode, "name") else str(self.poll_mode)
+        return f"Group({mode_name}, {poll_name})"
 
     def __eq__(self, other):
         # Ensure equality is based on mode and poll_mode

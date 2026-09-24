@@ -221,6 +221,11 @@ class ModbusDevice():
                 f"for group {group}. Consider splitting the group."
         )
 
+        _LOGGER.debug(
+            "Device %s %s (Slave ID %s): Reading group '%s' (addr %s..%s, %d registers)",
+            self.manufacturer, self.model, self._slave_id, group, start_addr, end_addr, n_reg
+        )
+
         method = self._get_read_method(group.mode)    
         response = await method(address=start_addr, count=n_reg, device_id=self._slave_id)
 
@@ -231,7 +236,7 @@ class ModbusDevice():
                 "Device %s %s (Slave ID %s): Failed reading group '%s' (addr %s..%s, %d registers): %s",
                 self.manufacturer, self.model, self._slave_id, group, start_addr, end_addr, n_reg, err_desc
             )
-            raise ModbusException(f"Error reading group '{group}': {err_desc}")
+            raise ModbusException(f"Error reading group '{group}' (addr {start_addr}..{end_addr}, {n_reg} regs): {err_desc}")
 
         data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
         _LOGGER.debug("Read data from address: %s - %s", start_addr, data)

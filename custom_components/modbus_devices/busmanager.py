@@ -224,7 +224,9 @@ class BaseBusManager(ABC):
                 # Re-raise so the device/coordinator sees the exception
                 raise
             finally:
-                self._active_slave = None   
+                self._active_slave = None
+                # Small inter-frame delay to ensure RS485 bus quiet time (turnaround)
+                await asyncio.sleep(0.02)   
 
 
 # ============================================================================
