@@ -35,7 +35,6 @@ class ModbusCoordinator(DataUpdateCoordinator):
         self._fast_poll_count = 0
         self._normal_poll_interval = scan_interval
         self._fast_poll_interval = scan_interval_fast
-        self._first_read_staggered = False
 
         self._device_entry = device_entry
 
@@ -88,18 +87,6 @@ class ModbusCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         _LOGGER.debug("Coordinator updating data for: %s", self.devicename) 
-
-        # Stagger startup polling across devices to avoid thundering herd on physical RS485 bus
-        if not self._first_read_staggered:
-            self._first_read_staggered = True
-            slave_id = getattr(self.bus, "slave_id", 0) or 0
-            jitter = (slave_id % 10) * 0.25
-            if jitter > 0:
-                _LOGGER.debug(
-                    "Staggering initial poll for %s (Slave %s) by %.2fs",
-                    self.devicename, slave_id, jitter
-                )
-                await asyncio.sleep(jitter)
 
         """ Counter for fast polling """
         if self._fast_poll_enabled:

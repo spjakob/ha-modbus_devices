@@ -106,7 +106,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         hass.data[DOMAIN][entry.entry_id] = coordinator
 
-        await coordinator.async_config_entry_first_refresh()
+        async with bus.startup_lock:
+            await coordinator.async_config_entry_first_refresh()
 
         # Forward the setup to the platforms.
         hass.async_create_task(

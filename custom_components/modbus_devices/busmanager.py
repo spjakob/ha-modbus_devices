@@ -83,6 +83,7 @@ class BaseBusManager(ABC):
     def __init__(self, queue_timeout: float = 20.0, turnaround_delay: float = 0.02) -> None:
         self._lock = asyncio.Lock()
         self._connect_lock = asyncio.Lock()
+        self._startup_lock = asyncio.Lock()
         self._client = None
         self._users: set[str] = set()
 
@@ -152,6 +153,11 @@ class BaseBusManager(ABC):
     def utilization_percent(self) -> float:
         """Return the bus utilization percentage over the sliding 60-second window."""
         return self._utilization_tracker.utilization_percent
+
+    @property
+    def startup_lock(self) -> asyncio.Lock:
+        """Return the startup lock used to serialize initial device refreshes."""
+        return self._startup_lock
 
     # ------------------------------------------------------------------
     # Device registration
@@ -502,6 +508,10 @@ class BusClient:
     @property
     def connected(self) -> bool:
         return self._bus.connected
+
+    @property
+    def startup_lock(self) -> asyncio.Lock:
+        return self._bus.startup_lock
 
     def __getattr__(self, name: str):
         if name.startswith("_"):
