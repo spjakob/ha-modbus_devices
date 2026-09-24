@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import logging
 
@@ -5,7 +6,12 @@ from enum import Enum
 from homeassistant.helpers.entity import EntityCategory
 
 from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.exceptions import ModbusException
+try:
+    from pymodbus.exceptions import ModbusException, ModbusIOException, ConnectionException
+except ImportError:
+    ModbusException = Exception
+    ModbusIOException = None
+    ConnectionException = None
 
 from .const import ByteOrder, WordOrder, ModbusMode, ModbusPollMode
 from .datatypes import ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
@@ -156,11 +162,16 @@ class ModbusDevice():
             except Exception as err:
                 failed_groups.append((group, err))
                 err_str = str(err).lower()
-                # If timeout or connection failure, device is unreachable -> break immediately to release bus lock!
-                if "timeout" in err_str or "timed out" in err_str or "connection" in err_str or "gateway" in err_str:
+                is_timeout_or_offline = (
+                    isinstance(err, (asyncio.TimeoutError, TimeoutError, ConnectionError))
+                    or (ModbusIOException is not None and isinstance(err, ModbusIOException))
+                    or (ConnectionException is not None and isinstance(err, ConnectionException))
+                    or any(k in err_str for k in ("timeout", "timed out", "no response", "connection", "gateway"))
+                )
+                if is_timeout_or_offline:
                     _LOGGER.warning(
-                        "Device %s %s (Slave ID %s): Communication timeout/failure reading group '%s'. Aborting remaining groups for this poll.",
-                        self.manufacturer, self.model, self._slave_id, group
+                        "Device %s %s (Slave ID %s): Communication timeout/failure reading group '%s' (%s). Aborting remaining groups for this poll.",
+                        self.manufacturer, self.model, self._slave_id, group, err
                     )
                     break
                 else:
@@ -229,6 +240,13 @@ class ModbusDevice():
         for name, dp in self.Datapoints[group].items():
             offset = dp.address - start_addr
             registers = data[offset:offset + dp.register_count]
+
+            if len(registers) != dp.register_count:
+                _LOGGER.warning(
+                    "Device %s %s (Slave ID %s): Received %d registers for datapoint '%s' (addr=%s), expected %d. Skipping.",
+                    self.manufacturer, self.model, self._slave_id, len(registers), name, dp.address, dp.register_count
+                )
+                continue
 
             try:
                 dp.from_modbus(registers, self.byte_order, self.word_order)

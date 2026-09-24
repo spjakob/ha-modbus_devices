@@ -16,17 +16,18 @@ async def async_setup_endpoint(hass, entry):
     if device_mode == "tcpip":
         ip = entry.data.get("ip_address")
         port = entry.data.get("port")
-        bus_manager = TCPBusManager(host=ip, port=port, timeout=0.5)
+        bus_manager = TCPBusManager(host=ip, port=port, timeout=0.5, retries=0)
     elif device_mode == "rtu":
         port = entry.data.get("serial_port")
         baud = entry.data.get("serial_baud")
-        # Default settings with 0.5s timeout for fast recovery
+        # Default settings with 0.5s timeout for fast recovery and 0 retries
         bus_manager = RTUBusManager(
             port=port,
             baudrate=baud,
             parity="N",
             stopbits=1,
-            timeout=0.5
+            timeout=0.5,
+            retries=0,
         )
     else:
         _LOGGER.error("Unknown device mode for endpoint: %s", device_mode)

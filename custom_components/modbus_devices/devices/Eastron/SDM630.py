@@ -32,8 +32,12 @@ _LOGGER = logging.getLogger(__name__)
 GROUP_INPUT_1 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_INPUT_2 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_INPUT_3 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_4 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_INPUT_5 = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_NEUTRAL = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_THD_PHASE = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_THD_AVG = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_DEMAND = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_THD_LINE = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_INPUT_ENERGY = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
 GROUP_HOLDING_RESET = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
 GROUP_HOLDING_INFO = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ONCE)
 
@@ -568,7 +572,7 @@ class Device(ModbusDevice):
                 ),
             ),
         }
-        self.Datapoints[GROUP_INPUT_4] = {
+        self.Datapoints[GROUP_INPUT_NEUTRAL] = {
             "Neutral current": ModbusDatapoint(
                 address=224,
                 register_count=2,
@@ -580,6 +584,8 @@ class Device(ModbusDevice):
                     enabledDefault=True,
                 ),
             ),
+        }
+        self.Datapoints[GROUP_INPUT_THD_PHASE] = {
             "Phase 1 L/N volts THD": ModbusDatapoint(
                 address=234,
                 register_count=2,
@@ -646,6 +652,8 @@ class Device(ModbusDevice):
                     precision=2,
                 ),
             ),
+        }
+        self.Datapoints[GROUP_INPUT_THD_AVG] = {
             "Average line to neutral volts THD": ModbusDatapoint(
                 address=248,
                 register_count=2,
@@ -668,6 +676,8 @@ class Device(ModbusDevice):
                     precision=2,
                 ),
             ),
+        }
+        self.Datapoints[GROUP_INPUT_DEMAND] = {
             "Phase 1 current demand": ModbusDatapoint(
                 address=258,
                 register_count=2,
@@ -741,8 +751,7 @@ class Device(ModbusDevice):
                 ),
             ),
         }
-        # MAIN SENSORS (INPUT REGISTERS)
-        self.Datapoints[GROUP_INPUT_5] = {
+        self.Datapoints[GROUP_INPUT_THD_LINE] = {
             "Line 1 to line 2 volts THD": ModbusDatapoint(
                 address=334,
                 register_count=2,
@@ -787,6 +796,9 @@ class Device(ModbusDevice):
                     precision=2,
                 ),
             ),
+        }
+        # MAIN SENSORS (INPUT REGISTERS)
+        self.Datapoints[GROUP_INPUT_ENERGY] = {
             "Total kWh": ModbusDatapoint(
                 address=342,
                 register_count=2,

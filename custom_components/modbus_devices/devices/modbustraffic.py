@@ -50,14 +50,18 @@ class ModbusTrafficStats:
             self.connection_errors += 1
 
     @property
+    def has_recent_error(self) -> bool:
+        """True if the device's last transaction was an error."""
+        return self.errors > 0 and self.last_error_time >= self.last_success_time
+
+    @property
     def is_active(self) -> bool:
         """Considered active if communicated successfully within the last 5 minutes without ongoing failure."""
         if self.last_success_time == 0.0:
             return False
-        now = time.monotonic()
-        # If error occurred after success and more than 60s has passed with no success
-        if self.last_error_time > self.last_success_time and (now - self.last_success_time > 60.0):
+        if self.last_error_time > self.last_success_time:
             return False
+        now = time.monotonic()
         return (now - self.last_success_time) < 300.0
 
     @property
@@ -87,6 +91,7 @@ class ModbusTrafficStats:
             "last_success_time": self.last_success_time,
             "last_activity_monotonic": self.last_activity,
             "is_active": self.is_active,
+            "has_recent_error": self.has_recent_error,
             "tx_rate_Bps": round(self.tx_rate, 1),
             "rx_rate_Bps": round(self.rx_rate, 1),
         }

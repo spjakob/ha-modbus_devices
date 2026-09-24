@@ -30,7 +30,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "packets", "packets"))
         entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "bits", "bits"))
         entities.append(ModbusEndpointRateSensor(bus_manager, config_entry))
-        entities.append(ModbusEndpointHealthSensor(bus_manager, config_entry))
+        entities.append(ModbusEndpointHealthSensor(bus_manager, config_entry, hass))
         async_add_entities(entities, False)
         return
 
@@ -224,8 +224,10 @@ class ModbusEndpointHealthSensor(SensorEntity):
     _attr_has_entity_name = True
     _attr_name = "Bus Health"
 
-    def __init__(self, bus_manager, config_entry):
+    def __init__(self, bus_manager, config_entry, hass=None):
         self.bus_manager = bus_manager
+        self.config_entry = config_entry
+        self._hass = hass
         self._unique_id = f"{config_entry.entry_id}_bus_health"
 
         self._attr_device_info = DeviceInfo(
@@ -235,25 +237,48 @@ class ModbusEndpointHealthSensor(SensorEntity):
             model="Bus Statistics",
         )
 
+    def _get_endpoint_coordinators(self) -> list[ModbusCoordinator]:
+        hass = self._hass or getattr(self, "hass", None)
+        if not hass:
+            return []
+        coordinators = []
+        domain_data = hass.data.get(DOMAIN, {})
+        for entry_id, obj in domain_data.items():
+            if isinstance(obj, ModbusCoordinator):
+                dev_entry = hass.config_entries.async_get_entry(entry_id)
+                if dev_entry and dev_entry.data.get("endpoint_id") == self.config_entry.entry_id:
+                    coordinators.append(obj)
+        return coordinators
+
     @property
     def unique_id(self):
         return self._unique_id
 
     @property
     def native_value(self) -> str:
-        total = self.bus_manager.total_devices_count
-        if total == 0:
-            return "No Devices"
         if not self.bus_manager.connected:
             return "Disconnected"
+
+        coordinators = self._get_endpoint_coordinators()
+        failed_coords = [c for c in coordinators if not c.last_update_success] if coordinators else []
+
+        total = len(coordinators) if coordinators else self.bus_manager.total_devices_count
+        if total == 0:
+            return "No Devices"
+
         active = self.bus_manager.active_devices_count
         errors = self.bus_manager.error_devices_count
 
-        if errors == 0:
-            return "OK"
+        if len(failed_coords) == total and total > 0:
+            return "Offline"
+
+        if failed_coords or errors > 0:
+            return "Degraded"
+
         if active == 0 and total > 0:
             return "Offline"
-        return "Degraded"
+
+        return "OK"
 
     @property
     def icon(self) -> str:
@@ -267,10 +292,16 @@ class ModbusEndpointHealthSensor(SensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         traffic = self.bus_manager.traffic
+        coordinators = self._get_endpoint_coordinators()
+        failed_devices = [
+            f"{c.devicename} (Slave {getattr(c._modbusDevice, '_slave_id', '?')})"
+            for c in coordinators if not c.last_update_success
+        ]
         return {
-            "total_devices": self.bus_manager.total_devices_count,
+            "total_devices": len(coordinators) if coordinators else self.bus_manager.total_devices_count,
             "active_devices": self.bus_manager.active_devices_count,
-            "devices_with_errors": self.bus_manager.error_devices_count,
+            "devices_with_errors": max(len(failed_devices), self.bus_manager.error_devices_count),
+            "failed_devices": failed_devices,
             "problem_slave_ids": self.bus_manager.problem_slaves,
             "timeouts_total": traffic.timeouts,
             "crc_errors_total": traffic.crc_errors,

@@ -6,6 +6,18 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable
 from pymodbus.client import AsyncModbusSerialClient, AsyncModbusTcpClient
 
+try:
+    from pymodbus.pdu import ExceptionResponse
+except ImportError:
+    ExceptionResponse = None
+
+try:
+    from pymodbus.exceptions import ModbusException, ModbusIOException, ConnectionException
+except ImportError:
+    ModbusException = None
+    ModbusIOException = None
+    ConnectionException = None
+
 from .devices.modbustraffic import ModbusTrafficStats
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,11 +71,11 @@ class BaseBusManager(ABC):
 
     @property
     def error_devices_count(self) -> int:
-        return sum(1 for s in self._device_traffic.values() if not s.is_active and s.errors > 0)
+        return sum(1 for s in self._device_traffic.values() if not s.is_active or s.has_recent_error)
 
     @property
     def problem_slaves(self) -> list[int]:
-        return [slave_id for slave_id, s in self._device_traffic.items() if not s.is_active and s.errors > 0]
+        return [slave_id for slave_id, s in self._device_traffic.items() if not s.is_active or s.has_recent_error]
 
     @property
     def devices_traffic(self) -> dict[int, ModbusTrafficStats]:
@@ -144,17 +156,38 @@ class BaseBusManager(ABC):
         if err_or_response is None:
             return "unknown"
 
+        # 1. Modbus protocol exception (Illegal Function, Illegal Address, etc.)
+        if hasattr(err_or_response, "exception_code"):
+            return "exception"
+        if ExceptionResponse is not None and isinstance(err_or_response, ExceptionResponse):
+            return "exception"
+
+        # 2. Connection-level errors
+        if ConnectionException is not None and isinstance(err_or_response, ConnectionException):
+            return "connection"
+        if isinstance(err_or_response, (ConnectionError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError)):
+            return "connection"
+
         err_str = str(err_or_response).lower()
         err_cls = err_or_response.__class__.__name__.lower()
 
-        if "exceptionresponse" in err_cls or "illegal" in err_str:
-            return "exception"
-        if isinstance(err_or_response, (asyncio.TimeoutError, TimeoutError)) or "timeout" in err_str or "timed out" in err_str:
-            return "timeout"
-        if "crc" in err_str or "checksum" in err_str or "frame" in err_str:
-            return "crc"
-        if "connection" in err_str or "connection" in err_cls or "socket" in err_str or "reset by peer" in err_str or "broken pipe" in err_str:
+        if "connection" in err_cls or "connection" in err_str or "socket" in err_str or "reset by peer" in err_str or "broken pipe" in err_str:
             return "connection"
+
+        # 3. CRC / Framing errors
+        if "crc" in err_str or "checksum" in err_str or "frame" in err_str or "framing" in err_str:
+            return "crc"
+
+        # 4. Timeout / No response errors
+        if isinstance(err_or_response, (asyncio.TimeoutError, TimeoutError)):
+            return "timeout"
+        if ModbusIOException is not None and isinstance(err_or_response, ModbusIOException):
+            return "timeout"
+        if "timeout" in err_str or "timed out" in err_str or "no response" in err_str:
+            return "timeout"
+
+        if "illegal" in err_str or "exceptionresponse" in err_cls:
+            return "exception"
 
         return "unknown"
 
@@ -200,15 +233,17 @@ class BaseBusManager(ABC):
 class RTUBusManager(BaseBusManager):
     """Shared Modbus RTU serial bus."""
 
-    def __init__(self, *, port: str, baudrate: int, parity: str='N', stopbits: int=1, timeout: float=3) -> None:
+    def __init__(self, *, port: str, baudrate: int, parity: str='N', stopbits: int=1, timeout: float=3, retries: int=0) -> None:
         super().__init__()
 
         self.port = port
+        self.retries = retries
         self._serial_cfg = {
             "baudrate": baudrate,
             "parity": parity,
             "stopbits": stopbits,
             "timeout": timeout,
+            "retries": retries,
         }
 
     async def async_start(self) -> None:
@@ -235,13 +270,13 @@ class RTUBusManager(BaseBusManager):
         self._client.close()
         self._client = None
 
-    def matches_serial_config(self, *, baudrate: int, parity: str='N', stopbits: int=1, timeout: float) -> bool:
-        return self._serial_cfg == {
-            "baudrate": baudrate,
-            "parity": parity,
-            "stopbits": stopbits,
-            "timeout": timeout,
-        }
+    def matches_serial_config(self, *, baudrate: int, parity: str='N', stopbits: int=1, timeout: float, **kwargs) -> bool:
+        return (
+            self._serial_cfg.get("baudrate") == baudrate
+            and self._serial_cfg.get("parity") == parity
+            and self._serial_cfg.get("stopbits") == stopbits
+            and self._serial_cfg.get("timeout") == timeout
+        )
 
 
 # ============================================================================
@@ -250,21 +285,26 @@ class RTUBusManager(BaseBusManager):
 class TCPBusManager(BaseBusManager):
     """Shared Modbus TCP connection."""
 
-    def __init__(self, *, host: str, port: int, timeout: float=3) -> None:
+    def __init__(self, *, host: str, port: int, timeout: float=3, retries: int=0) -> None:
         super().__init__()
         self.host = host
         self.port = port
         self.timeout = timeout
+        self.retries = retries
 
     async def async_start(self) -> None:
-        _LOGGER.debug("Starting TCP Bus Manager!")
         if self._client is not None:
-            _LOGGER.debug("Returning!")
             return
 
         _LOGGER.debug("Opening Modbus TCP bus %s:%s", self.host, self.port)
 
-        client = AsyncModbusTcpClient(host=self.host, port=self.port, timeout=self.timeout, trace_packet=self._bus_packet_trace)
+        client = AsyncModbusTcpClient(
+            host=self.host,
+            port=self.port,
+            timeout=self.timeout,
+            retries=self.retries,
+            trace_packet=self._bus_packet_trace
+        )
 
         await client.connect()
 
