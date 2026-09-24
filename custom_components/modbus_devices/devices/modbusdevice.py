@@ -1,3 +1,4 @@
+import inspect
 import logging
 
 from enum import Enum
@@ -116,11 +117,11 @@ class ModbusDevice():
     """ ******************************************************* """
     """ ************* FUNCTIONS CALLED ON EVENTS ************** """
     """ ******************************************************* """
-    def onBeforeRead(self):
+    async def onBeforeRead(self):
         pass
-    def onAfterRead(self):
+    async def onAfterRead(self):
         pass
-    def onAfterFirstRead(self):
+    async def onAfterFirstRead(self):
         pass
 
     # Packet tracing
@@ -136,7 +137,10 @@ class ModbusDevice():
     """ *********** EXTERNAL CALL TO READ ALL DATA ************ """
     """ ******************************************************* """
     async def readData(self):
-        self.onBeforeRead()
+        if inspect.iscoroutinefunction(self.onBeforeRead):
+            await self.onBeforeRead()
+        else:
+            self.onBeforeRead()
 
         failed_groups: list[tuple[ModbusGroup, Exception]] = []
         any_success = False
@@ -175,9 +179,15 @@ class ModbusDevice():
 
         if self.firstRead:   
             self.firstRead = False
-            self.onAfterFirstRead()
+            if inspect.iscoroutinefunction(self.onAfterFirstRead):
+                await self.onAfterFirstRead()
+            else:
+                self.onAfterFirstRead()
 
-        self.onAfterRead()
+        if inspect.iscoroutinefunction(self.onAfterRead):
+            await self.onAfterRead()
+        else:
+            self.onAfterRead()
 
     """ ******************************************************* """
     """ ******************** READ GROUP *********************** """

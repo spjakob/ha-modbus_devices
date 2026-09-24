@@ -76,7 +76,7 @@ class Device(ModbusDevice):
             "Coling Mode Humidity Limit": ModbusDatapoint(address=57, scaling=0.1, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
         }
 
-    def onAfterFirstRead(self):
+    async def onAfterFirstRead(self):
         # Update device info
         self.serial_number = self.Datapoints[GROUP_DEVICE_INFO]["Serial Number"].value
         number_of_zones = self.Datapoints[GROUP_DEVICE_INFO]["Number Of Zones"].value
@@ -95,13 +95,14 @@ class Device(ModbusDevice):
         # Dynamically assign SENSOR datapoints to a separate group for each zone
         for i in range(1, int(number_of_zones) + 1):
             # Create a new dynamic group
-            self.dynamic_groups[f"GROUP_SENSORS_ZONE_{i}"] = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+            group_sensor = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+            self.dynamic_groups[f"GROUP_SENSORS_ZONE_{i}"] = group_sensor
 
             base_register = i * 100
             _LOGGER.debug("Setting up zone %s adding temperature register %s ", i, base_register)
 
             # Assign a dictionary of datapoints to the new dynamic group
-            self.Datapoints[self.dynamic_groups[f"GROUP_SENSORS_ZONE_{i}"]] = {
+            self.Datapoints[group_sensor] = {
                 f"Zone {i} Actual Temperature": ModbusDatapoint(
                     address=base_register,
                     scaling=0.1,
@@ -123,14 +124,20 @@ class Device(ModbusDevice):
                 f"Zone {i} Connected Actuators": ModbusDatapoint(
                     address=base_register + 7, type='uint') # Corrected from +6 to +7
             }
+            # Read dynamic sensor group immediately so values are not 0 on HA startup
+            try:
+                await self.readGroup(group_sensor)
+            except Exception as err:
+                _LOGGER.warning("ARCHUB: Error reading initial sensor data for zone %s: %s", i, err)
         
         # Dynamically assign SETPOINT datapoints to a separate group for each zone
-        for i in range(1, number_of_zones + 1):
+        for i in range(1, int(number_of_zones) + 1):
             # Create a new dynamic group
-            self.dynamic_groups[f"GROUP_SETPOINTS_ZONE_{i}"] = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
+            group_setpoint = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
+            self.dynamic_groups[f"GROUP_SETPOINTS_ZONE_{i}"] = group_setpoint
 
             base_register = i * 100
-            self.Datapoints[self.dynamic_groups[f"GROUP_SETPOINTS_ZONE_{i}"]] = {
+            self.Datapoints[group_setpoint] = {
                 f"Zone {i} Target Temperature": ModbusDatapoint(
                     address=base_register, 
                     scaling=0.1, 
@@ -142,6 +149,11 @@ class Device(ModbusDevice):
                     address=base_register + 2, 
                     entity_data=EntityDataNumber(min_value=0, max_value=255))
             }
+            # Read dynamic setpoint group immediately so values are not 0 on HA startup
+            try:
+                await self.readGroup(group_setpoint)
+            except Exception as err:
+                _LOGGER.warning("ARCHUB: Error reading initial setpoint data for zone %s: %s", i, err)
 
         # Add UI datapoints that are calculated
         for i in range(1, int(number_of_zones) + 1):
