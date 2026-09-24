@@ -112,9 +112,9 @@ class ModbusDeviceCounterSensor(SensorEntity):
     def native_value(self):
         device = self.coordinator._modbusDevice
         if self._counter_type == 'packets':
-            return device.device_tx_packets + device.device_rx_packets
+            return device.device_traffic.tx_count + device.device_traffic.rx_count
         elif self._counter_type == 'bits':
-            return device.device_tx_bits + device.device_rx_bits
+            return device.device_traffic.tx_bytes * 8 + device.device_traffic.rx_bytes * 8
         return 0
 
     @property
@@ -152,9 +152,9 @@ class ModbusEndpointCounterSensor(SensorEntity):
     @property
     def native_value(self):
         if self._counter_type == 'packets':
-            return self.bus_manager.tx_packets + self.bus_manager.rx_packets
+            return self.bus_manager.traffic.tx_count + self.bus_manager.traffic.rx_count
         elif self._counter_type == 'bits':
-            return self.bus_manager.tx_bits + self.bus_manager.rx_bits
+            return self.bus_manager.traffic.tx_bytes * 8 + self.bus_manager.traffic.rx_bytes * 8
         return 0
 
     @property
@@ -203,7 +203,7 @@ class ModbusEndpointRateSensor(SensorEntity):
 
     def update(self):
         """Calculate the rate since last poll."""
-        current_bits = self.bus_manager.tx_bits + self.bus_manager.rx_bits
+        current_bits = self.bus_manager.traffic.tx_bytes * 8 + self.bus_manager.traffic.rx_bytes * 8
         current_time = time.time()
 
         delta_bits = current_bits - self._last_total_bits

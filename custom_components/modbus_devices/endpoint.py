@@ -1,8 +1,7 @@
 from __future__ import annotations
 import logging
 from typing import Any
-from .tcp_bus import TCPBusManager
-from .rtu_bus import RTUBusManager
+from .busmanager import TCPBusManager, RTUBusManager
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -17,19 +16,17 @@ async def async_setup_endpoint(hass, entry):
     if device_mode == "tcpip":
         ip = entry.data.get("ip_address")
         port = entry.data.get("port")
-        bus_manager = TCPBusManager(hass=hass, host=ip, port=port)
+        bus_manager = TCPBusManager(host=ip, port=port, timeout=0.5)
     elif device_mode == "rtu":
         port = entry.data.get("serial_port")
         baud = entry.data.get("serial_baud")
-        # Default settings matching original code (hardcoded 8N1)
+        # Default settings with 0.5s timeout for fast recovery
         bus_manager = RTUBusManager(
-            hass=hass,
             port=port,
             baudrate=baud,
-            bytesize=8,
             parity="N",
             stopbits=1,
-            timeout=3.0
+            timeout=0.5
         )
     else:
         _LOGGER.error("Unknown device mode for endpoint: %s", device_mode)
