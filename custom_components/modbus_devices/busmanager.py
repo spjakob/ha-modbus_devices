@@ -47,6 +47,29 @@ class BaseBusManager(ABC):
         return self.traffic.rx_bytes * 8
 
     # ------------------------------------------------------------------
+    # Bus health overview properties
+    # ------------------------------------------------------------------
+    @property
+    def total_devices_count(self) -> int:
+        return len(self._device_traffic)
+
+    @property
+    def active_devices_count(self) -> int:
+        return sum(1 for s in self._device_traffic.values() if s.is_active)
+
+    @property
+    def error_devices_count(self) -> int:
+        return sum(1 for s in self._device_traffic.values() if not s.is_active and s.errors > 0)
+
+    @property
+    def problem_slaves(self) -> list[int]:
+        return [slave_id for slave_id, s in self._device_traffic.items() if not s.is_active and s.errors > 0]
+
+    @property
+    def devices_traffic(self) -> dict[int, ModbusTrafficStats]:
+        return self._device_traffic
+
+    # ------------------------------------------------------------------
     # Device registration
     # ------------------------------------------------------------------
 
@@ -116,6 +139,25 @@ class BaseBusManager(ABC):
     # Serialized execution
     # ------------------------------------------------------------------
 
+    def _classify_error(self, err_or_response: Any) -> str:
+        """Classify error into 'timeout', 'crc', 'exception', 'connection', or 'unknown'."""
+        if err_or_response is None:
+            return "unknown"
+
+        err_str = str(err_or_response).lower()
+        err_cls = err_or_response.__class__.__name__.lower()
+
+        if "exceptionresponse" in err_cls or "illegal" in err_str:
+            return "exception"
+        if isinstance(err_or_response, (asyncio.TimeoutError, TimeoutError)) or "timeout" in err_str or "timed out" in err_str:
+            return "timeout"
+        if "crc" in err_str or "checksum" in err_str or "frame" in err_str:
+            return "crc"
+        if "connection" in err_str or "connection" in err_cls or "socket" in err_str or "reset by peer" in err_str or "broken pipe" in err_str:
+            return "connection"
+
+        return "unknown"
+
     async def execute(self, slave_id: int, func: Callable[..., Any], *args, **kwargs) -> Any:
         """Execute a Modbus call with locking and slave context."""
         await self.async_start()
@@ -123,16 +165,28 @@ class BaseBusManager(ABC):
         async with self._lock:
             self._active_slave = slave_id
             try:
-                return await func(*args, **kwargs)
+                result = await func(*args, **kwargs)
+                if hasattr(result, "isError") and result.isError():
+                    err_type = self._classify_error(result)
+                    self.traffic.record_error(err_type)
+                    stats = self._device_traffic.get(slave_id)
+                    if stats:
+                        stats.record_error(err_type)
+                else:
+                    self.traffic.record_success()
+                    stats = self._device_traffic.get(slave_id)
+                    if stats:
+                        stats.record_success()
+                return result
             except Exception as e:
+                err_type = self._classify_error(e)
                 # Record error at bus level
-                self.traffic.record_error()
+                self.traffic.record_error(err_type)
                 
                 # Record error at device level if known
-                if self._active_slave is not None:
-                    stats = self._device_traffic.get(self._active_slave)
-                    if stats:
-                        stats.record_error()
+                stats = self._device_traffic.get(slave_id)
+                if stats:
+                    stats.record_error(err_type)
 
                 # Re-raise so the device/coordinator sees the exception
                 raise

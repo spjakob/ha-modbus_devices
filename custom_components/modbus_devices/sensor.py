@@ -30,6 +30,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "packets", "packets"))
         entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "bits", "bits"))
         entities.append(ModbusEndpointRateSensor(bus_manager, config_entry))
+        entities.append(ModbusEndpointHealthSensor(bus_manager, config_entry))
         async_add_entities(entities, False)
         return
 
@@ -215,3 +216,79 @@ class ModbusEndpointRateSensor(SensorEntity):
 
         self._last_total_bits = current_bits
         self._last_time = current_time
+
+
+class ModbusEndpointHealthSensor(SensorEntity):
+    """Sensor for tracking overall bus health and connected devices status."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Bus Health"
+
+    def __init__(self, bus_manager, config_entry):
+        self.bus_manager = bus_manager
+        self._unique_id = f"{config_entry.entry_id}_bus_health"
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry.entry_id)},
+            name=config_entry.title,
+            manufacturer="Modbus Endpoint",
+            model="Bus Statistics",
+        )
+
+    @property
+    def unique_id(self):
+        return self._unique_id
+
+    @property
+    def native_value(self) -> str:
+        total = self.bus_manager.total_devices_count
+        if total == 0:
+            return "No Devices"
+        if not self.bus_manager.connected:
+            return "Disconnected"
+        active = self.bus_manager.active_devices_count
+        errors = self.bus_manager.error_devices_count
+
+        if errors == 0:
+            return "OK"
+        if active == 0 and total > 0:
+            return "Offline"
+        return "Degraded"
+
+    @property
+    def icon(self) -> str:
+        state = self.native_value
+        if state == "OK":
+            return "mdi:check-network"
+        elif state == "Degraded":
+            return "mdi:alert-network"
+        return "mdi:close-network"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        traffic = self.bus_manager.traffic
+        return {
+            "total_devices": self.bus_manager.total_devices_count,
+            "active_devices": self.bus_manager.active_devices_count,
+            "devices_with_errors": self.bus_manager.error_devices_count,
+            "problem_slave_ids": self.bus_manager.problem_slaves,
+            "timeouts_total": traffic.timeouts,
+            "crc_errors_total": traffic.crc_errors,
+            "modbus_exceptions_total": traffic.exceptions,
+            "connection_errors_total": traffic.connection_errors,
+            "last_error_type": traffic.last_error_type,
+            "error_summary": {
+                "timeouts": traffic.timeouts,
+                "crc_errors": traffic.crc_errors,
+                "exceptions": traffic.exceptions,
+                "connection_errors": traffic.connection_errors,
+            },
+        }
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def should_poll(self) -> bool:
+        return True

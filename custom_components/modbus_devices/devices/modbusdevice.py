@@ -14,6 +14,26 @@ from ..busmanager import BusClient
 
 _LOGGER = logging.getLogger(__name__)
 
+MODBUS_EXCEPTION_NAMES = {
+    0x01: "Illegal Function (0x01)",
+    0x02: "Illegal Data Address (0x02)",
+    0x03: "Illegal Data Value (0x03)",
+    0x04: "Slave Device Failure (0x04)",
+    0x05: "Acknowledge (0x05)",
+    0x06: "Slave Device Busy (0x06)",
+    0x08: "Memory Parity Error (0x08)",
+    0x0A: "Gateway Path Unavailable (0x0A)",
+    0x0B: "Gateway Target Device Failed to Respond (0x0B)",
+}
+
+def decode_modbus_error(response: Any) -> str:
+    """Return a descriptive human-readable string for a Modbus error response."""
+    if hasattr(response, "exception_code"):
+        code = response.exception_code
+        name = MODBUS_EXCEPTION_NAMES.get(code, f"Unknown Exception Code (0x{code:02X})")
+        return f"Modbus Exception: {name}"
+    return str(response)
+
 class ModbusDevice():
     # Default properties
     manufacturer = None
@@ -118,14 +138,40 @@ class ModbusDevice():
     async def readData(self):
         self.onBeforeRead()
 
-        try:
-            for group, _ in self.Datapoints.items():
-                if group.poll_mode == ModbusPollMode.POLL_ON:
-                    await self.readGroup(group)
-                elif group.poll_mode == ModbusPollMode.POLL_ONCE and self.firstRead:
-                    await self.readGroup(group)
-        except Exception as err:
-            raise
+        failed_groups: list[tuple[ModbusGroup, Exception]] = []
+        any_success = False
+
+        for group, _ in self.Datapoints.items():
+            should_poll = (group.poll_mode == ModbusPollMode.POLL_ON) or (group.poll_mode == ModbusPollMode.POLL_ONCE and self.firstRead)
+            if not should_poll:
+                continue
+
+            try:
+                await self.readGroup(group)
+                any_success = True
+            except Exception as err:
+                failed_groups.append((group, err))
+                err_str = str(err).lower()
+                # If timeout or connection failure, device is unreachable -> break immediately to release bus lock!
+                if "timeout" in err_str or "timed out" in err_str or "connection" in err_str or "gateway" in err_str:
+                    _LOGGER.warning(
+                        "Device %s %s (Slave ID %s): Communication timeout/failure reading group '%s'. Aborting remaining groups for this poll.",
+                        self.manufacturer, self.model, self._slave_id, group
+                    )
+                    break
+                else:
+                    _LOGGER.warning(
+                        "Device %s %s (Slave ID %s): Error reading group '%s': %s. Continuing with next group.",
+                        self.manufacturer, self.model, self._slave_id, group, err
+                    )
+
+        if failed_groups:
+            # If nothing succeeded, or if firstRead, raise so coordinator knows update failed
+            if not any_success or self.firstRead:
+                first_group, first_err = failed_groups[0]
+                raise ModbusException(
+                    f"Device {self.manufacturer} {self.model} (Slave {self._slave_id}) failed reading group '{first_group}': {first_err}"
+                )
 
         if self.firstRead:   
             self.firstRead = False
@@ -159,7 +205,12 @@ class ModbusDevice():
 
         # Handle Modbus errors
         if response.isError():
-            raise ModbusException(f"Error reading group {group}: {response}")
+            err_desc = decode_modbus_error(response)
+            _LOGGER.warning(
+                "Device %s %s (Slave ID %s): Failed reading group '%s' (addr %s..%s, %d registers): %s",
+                self.manufacturer, self.model, self._slave_id, group, start_addr, end_addr, n_reg, err_desc
+            )
+            raise ModbusException(f"Error reading group '{group}': {err_desc}")
 
         data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
         _LOGGER.debug("Read data from address: %s - %s", start_addr, data)
@@ -192,7 +243,12 @@ class ModbusDevice():
 
         # Handle Modbus errors
         if response.isError():
-            raise ModbusException(f"Error reading value for key '{key}': {response}")
+            err_desc = decode_modbus_error(response)
+            _LOGGER.warning(
+                "Device %s %s (Slave ID %s): Failed reading key '%s' in group '%s': %s",
+                self.manufacturer, self.model, self._slave_id, key, group, err_desc
+            )
+            raise ModbusException(f"Error reading value for key '{key}': {err_desc}")
 
         data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
         _LOGGER.debug("Read data: %s", data)
@@ -247,7 +303,12 @@ class ModbusDevice():
             )
 
         if response.isError():
-            raise ModbusException(f"Failed to write value for key '{key}': {response}")
+            err_desc = decode_modbus_error(response)
+            _LOGGER.error(
+                "Device %s %s (Slave ID %s): Failed writing value for key '%s' in group '%s': %s",
+                self.manufacturer, self.model, self._slave_id, key, group, err_desc
+            )
+            raise ModbusException(f"Failed to write value for key '{key}': {err_desc}")
 
         # Update the cached value
         datapoint.value = value
