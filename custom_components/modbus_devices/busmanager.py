@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import contextlib
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -80,7 +81,7 @@ class BusUtilizationTracker:
 # Base bus manager
 # ============================================================================
 class BaseBusManager(ABC):
-    def __init__(self, queue_timeout: float = 20.0, turnaround_delay: float = 0.02) -> None:
+    def __init__(self, queue_timeout: float = 20.0, turnaround_delay: float = 0.02, error_recovery_delay: float = 0.4) -> None:
         self._lock = asyncio.Lock()
         self._connect_lock = asyncio.Lock()
         self._startup_lock = asyncio.Lock()
@@ -91,6 +92,7 @@ class BaseBusManager(ABC):
         self._waiting_count: int = 0
         self.queue_timeout: float = queue_timeout
         self._turnaround_delay: float = turnaround_delay
+        self._error_recovery_delay: float = error_recovery_delay
 
         # Utilization tracking
         self._utilization_tracker = BusUtilizationTracker(window_seconds=60.0)
@@ -158,6 +160,24 @@ class BaseBusManager(ABC):
     def startup_lock(self) -> asyncio.Lock:
         """Return the startup lock used to serialize initial device refreshes."""
         return self._startup_lock
+
+    @contextlib.asynccontextmanager
+    async def startup_session(self, startup_timeout: float = 5.0, startup_retries: int = 1):
+        """Context manager to serialize startup refreshes with an extended temporary timeout and single retry."""
+        async with self._startup_lock:
+            old_timeout = getattr(self, "timeout", None)
+            old_retries = getattr(self, "retries", None)
+            if hasattr(self, "timeout"):
+                self.timeout = startup_timeout
+            if hasattr(self, "retries"):
+                self.retries = startup_retries
+            try:
+                yield
+            finally:
+                if old_timeout is not None and hasattr(self, "timeout"):
+                    self.timeout = old_timeout
+                if old_retries is not None and hasattr(self, "retries"):
+                    self.retries = old_retries
 
     # ------------------------------------------------------------------
     # Device registration
@@ -294,6 +314,7 @@ class BaseBusManager(ABC):
         # 2. Lock is acquired: execute the wire transaction shielded against cancellation
         self._utilization_tracker.start_busy()
         self._active_slave = slave_id
+        has_error = False
         try:
             coro_or_val = func(*args, **kwargs)
             if asyncio.iscoroutine(coro_or_val) or isinstance(coro_or_val, asyncio.Future):
@@ -301,6 +322,7 @@ class BaseBusManager(ABC):
                 try:
                     result = await asyncio.shield(wire_task)
                 except asyncio.CancelledError:
+                    has_error = True
                     _LOGGER.warning(
                         "Request for Slave %s was cancelled by caller while active on bus. "
                         "Shielding transaction until physical wire is clear...",
@@ -315,6 +337,7 @@ class BaseBusManager(ABC):
                 result = coro_or_val
 
             if hasattr(result, "isError") and result.isError():
+                has_error = True
                 err_type = self._classify_error(result)
                 self.traffic.record_error(err_type)
                 stats = self._device_traffic.get(slave_id)
@@ -327,8 +350,10 @@ class BaseBusManager(ABC):
                     stats.record_success()
             return result
         except asyncio.CancelledError:
+            has_error = True
             raise
         except Exception as e:
+            has_error = True
             err_type = self._classify_error(e)
             # Record error at bus level
             self.traffic.record_error(err_type)
@@ -344,10 +369,13 @@ class BaseBusManager(ABC):
             self._active_slave = None
             self._utilization_tracker.end_busy()
             try:
-                # Small inter-frame delay to ensure RS485 bus quiet time (turnaround)
-                if self._turnaround_delay > 0:
+                # If an error/timeout occurred, provide a longer recovery delay (0.4s)
+                # to allow the physical RS485 bus and hardware gateway UART to settle.
+                # Otherwise, use the standard quiet turnaround delay (20ms).
+                delay = self._error_recovery_delay if has_error else self._turnaround_delay
+                if delay > 0:
                     try:
-                        await asyncio.sleep(self._turnaround_delay)
+                        await asyncio.sleep(delay)
                     except asyncio.CancelledError:
                         pass
             finally:
@@ -371,11 +399,17 @@ class RTUBusManager(BaseBusManager):
         retries: int = 0,
         queue_timeout: float = 20.0,
         turnaround_delay: float = 0.02,
+        error_recovery_delay: float = 0.4,
     ) -> None:
-        super().__init__(queue_timeout=queue_timeout, turnaround_delay=turnaround_delay)
+        super().__init__(
+            queue_timeout=queue_timeout,
+            turnaround_delay=turnaround_delay,
+            error_recovery_delay=error_recovery_delay,
+        )
 
         self.port = port
-        self.retries = retries
+        self._retries = retries
+        self._timeout = timeout
         self._serial_cfg = {
             "baudrate": baudrate,
             "parity": parity,
@@ -383,6 +417,28 @@ class RTUBusManager(BaseBusManager):
             "timeout": timeout,
             "retries": retries,
         }
+
+    @property
+    def retries(self) -> int:
+        return self._retries
+
+    @retries.setter
+    def retries(self, value: int) -> None:
+        self._retries = value
+        self._serial_cfg["retries"] = value
+        if self._client is not None and hasattr(self._client, "ctx"):
+            self._client.ctx.retries = value
+
+    @property
+    def timeout(self) -> float:
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, value: float) -> None:
+        self._timeout = value
+        self._serial_cfg["timeout"] = value
+        if self._client is not None and hasattr(self._client, "comm_params"):
+            self._client.comm_params.timeout_connect = value
 
     async def async_start(self) -> None:
         if self._client is not None:
@@ -436,13 +492,38 @@ class TCPBusManager(BaseBusManager):
         timeout: float = 3,
         retries: int = 0,
         queue_timeout: float = 20.0,
-        turnaround_delay: float = 0.005,
+        turnaround_delay: float = 0.02,
+        error_recovery_delay: float = 0.4,
     ) -> None:
-        super().__init__(queue_timeout=queue_timeout, turnaround_delay=turnaround_delay)
+        super().__init__(
+            queue_timeout=queue_timeout,
+            turnaround_delay=turnaround_delay,
+            error_recovery_delay=error_recovery_delay,
+        )
         self.host = host
         self.port = port
-        self.timeout = timeout
-        self.retries = retries
+        self._timeout = timeout
+        self._retries = retries
+
+    @property
+    def retries(self) -> int:
+        return self._retries
+
+    @retries.setter
+    def retries(self, value: int) -> None:
+        self._retries = value
+        if self._client is not None and hasattr(self._client, "ctx"):
+            self._client.ctx.retries = value
+
+    @property
+    def timeout(self) -> float:
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, value: float) -> None:
+        self._timeout = value
+        if self._client is not None and hasattr(self._client, "comm_params"):
+            self._client.comm_params.timeout_connect = value
 
     async def async_start(self) -> None:
         if self._client is not None:
@@ -512,6 +593,10 @@ class BusClient:
     @property
     def startup_lock(self) -> asyncio.Lock:
         return self._bus.startup_lock
+
+    def startup_session(self, startup_timeout: float = 5.0, startup_retries: int = 1):
+        """Context manager to serialize startup refreshes with an extended temporary timeout and single retry."""
+        return self._bus.startup_session(startup_timeout=startup_timeout, startup_retries=startup_retries)
 
     def __getattr__(self, name: str):
         if name.startswith("_"):

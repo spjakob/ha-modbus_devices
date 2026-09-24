@@ -1,9 +1,12 @@
 """Support for Modbus devices."""
+import asyncio
 import logging
+import time
 
 from functools import partial
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -31,6 +34,19 @@ from .endpoint import async_setup_endpoint, async_unload_endpoint
 from .busmanager import TCPBusManager, RTUBusManager, BusClient
 
 _LOGGER = logging.getLogger(__name__)
+
+async def async_get_or_wait_for_endpoint(
+    hass: HomeAssistant, endpoint_id: str, timeout: float = 10.0
+):
+    """Wait for an endpoint bus manager to become available during startup."""
+    start = time.monotonic()
+    while time.monotonic() - start < timeout:
+        endpoints = hass.data.get(DOMAIN, {}).get("endpoints", {})
+        bus_manager = endpoints.get(endpoint_id)
+        if bus_manager:
+            return bus_manager
+        await asyncio.sleep(0.1)
+    return None
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up platform from a ConfigEntry."""
@@ -69,14 +85,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug("Setting up Modbus Device: %s", entry.title)
 
         endpoint_id = entry.data.get(CONF_ENDPOINT_ID)
-        endpoints = hass.data.get(DOMAIN, {}).get("endpoints", {})
-        bus_manager = endpoints.get(endpoint_id)
+        bus_manager = await async_get_or_wait_for_endpoint(hass, endpoint_id, timeout=10.0)
 
         if not bus_manager:
             _LOGGER.error("Endpoint %s not found for device %s. Ensure Endpoint is added and loaded.", endpoint_id, entry.title)
-            # Retrying might help if endpoint loads later?
-            # ConfigEntryNotReady would be appropriate if we expect it to come up.
-            from homeassistant.exceptions import ConfigEntryNotReady
             raise ConfigEntryNotReady(f"Endpoint {endpoint_id} not available")
 
         slave_id = entry.data[CONF_SLAVE_ID]
@@ -106,7 +118,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         hass.data[DOMAIN][entry.entry_id] = coordinator
 
-        async with bus.startup_lock:
+        async with bus.startup_session(startup_timeout=5.0, startup_retries=1):
             await coordinator.async_config_entry_first_refresh()
 
         # Forward the setup to the platforms.
