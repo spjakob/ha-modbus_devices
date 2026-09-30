@@ -27,7 +27,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             return
 
         entities = []
-        entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "packets", "packets"))
+        entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "requests", "requests"))
+        entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "errors", "errors"))
         entities.append(ModbusEndpointCounterSensor(bus_manager, config_entry, "bits", "bits"))
         entities.append(ModbusEndpointRateSensor(bus_manager, config_entry))
         entities.append(ModbusEndpointUtilizationSensor(bus_manager, config_entry))
@@ -54,7 +55,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                         ha_entities.append(ModbusSensorEntity(coordinator, group, key, datapoint))
 
         # Add Device Counters (Diagnostic)
-        ha_entities.append(ModbusDeviceCounterSensor(coordinator, "packets", "packets"))
+        ha_entities.append(ModbusDeviceCounterSensor(coordinator, "requests", "requests"))
+        ha_entities.append(ModbusDeviceCounterSensor(coordinator, "errors", "errors"))
         ha_entities.append(ModbusDeviceCounterSensor(coordinator, "bits", "bits"))
 
         async_add_entities(ha_entities, False)
@@ -116,6 +118,10 @@ class ModbusDeviceCounterSensor(SensorEntity):
         device = self.coordinator._modbusDevice
         if self._counter_type == 'packets':
             return device.traffic.tx_count + device.traffic.rx_count
+        elif self._counter_type == 'requests':
+            return device.traffic.tx_count
+        elif self._counter_type == 'errors':
+            return device.traffic.errors
         elif self._counter_type == 'bits':
             return (device.traffic.tx_bytes + device.traffic.rx_bytes) * 8
         return 0
@@ -156,6 +162,10 @@ class ModbusEndpointCounterSensor(SensorEntity):
     def native_value(self):
         if self._counter_type == 'packets':
             return self.bus_manager.traffic.tx_count + self.bus_manager.traffic.rx_count
+        elif self._counter_type == 'requests':
+            return self.bus_manager.traffic.tx_count
+        elif self._counter_type == 'errors':
+            return self.bus_manager.traffic.errors
         elif self._counter_type == 'bits':
             return self.bus_manager.traffic.tx_bytes * 8 + self.bus_manager.traffic.rx_bytes * 8
         return 0
