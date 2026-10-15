@@ -105,11 +105,11 @@ class ModbusDevice():
     """ ******************************************************* """
     """ ************* FUNCTIONS CALLED ON EVENTS ************** """
     """ ******************************************************* """
-    def onBeforeRead(self):
+    async def onBeforeRead(self):
         pass
-    def onAfterRead(self):
+    async def onAfterRead(self):
         pass
-    def onAfterFirstRead(self):
+    async def onAfterFirstRead(self):
         pass
 
     # Packet tracing
@@ -125,7 +125,7 @@ class ModbusDevice():
     """ *********** EXTERNAL CALL TO READ ALL DATA ************ """
     """ ******************************************************* """
     async def readData(self):
-        self.onBeforeRead()
+        await self.onBeforeRead()
 
         try:
             for group, _ in self.Datapoints.items():
@@ -138,9 +138,9 @@ class ModbusDevice():
 
         if self.firstRead:   
             self.firstRead = False
-            self.onAfterFirstRead()
+            await self.onAfterFirstRead()
 
-        self.onAfterRead()
+        await self.onAfterRead()
 
     """ ******************************************************* """
     """ ******************** READ GROUP *********************** """

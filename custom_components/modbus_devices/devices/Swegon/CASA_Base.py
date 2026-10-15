@@ -171,7 +171,7 @@ class Device(ModbusDevice):
             "Efficiency Extract": ModbusSensor(units=PERCENTAGE, icon="mdi:percent"),
         }       
 
-    def onAfterFirstRead(self):
+    async def onAfterFirstRead(self):
         # Update device info
         self.model = self.Datapoints[GROUP_DEVICE_INFO]["Model Name"].value
         self.serial_number = self.Datapoints[GROUP_DEVICE_INFO]["Serial Number"].value
@@ -181,7 +181,7 @@ class Device(ModbusDevice):
         c = self.Datapoints[GROUP_DEVICE_INFO]["FW Build"].value
         self.sw_version = '{}.{}.{}'.format(a,b,c)
 
-    def onAfterRead(self):
+    async def onAfterRead(self):
         # Calculate efficiency
         fresh = self.Datapoints[GROUP_SENSORS]["Fresh Air Temp"].value
         sup = self.Datapoints[GROUP_SENSORS]["Supply Temp before re-heater"].value

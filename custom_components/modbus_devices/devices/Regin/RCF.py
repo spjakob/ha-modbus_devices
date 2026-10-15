@@ -298,7 +298,7 @@ class Device(ModbusDevice):
             ),
         }
 
-    def onAfterFirstRead(self):
+    async def onAfterFirstRead(self):
         # Update device info
 
         a = self.Datapoints[GROUP_DEVICE_INFO]["Software Type"].value

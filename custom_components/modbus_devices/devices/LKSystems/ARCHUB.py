@@ -76,7 +76,7 @@ class Device(ModbusDevice):
             "Coling Mode Humidity Limit": ModbusNumber(address=57, scaling=0.1, deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1),
         }
 
-    def onAfterFirstRead(self):
+    async def onAfterFirstRead(self):
         # Update device info
         self.serial_number = self.Datapoints[GROUP_DEVICE_INFO]["Serial Number"].value
         number_of_zones = self.Datapoints[GROUP_DEVICE_INFO]["Number Of Zones"].value
@@ -148,7 +148,7 @@ class Device(ModbusDevice):
             self.Datapoints.setdefault(GROUP_UNIT_STATUSES, {})[f"Zone {i} Thermostat Address"] = ModbusSensor(icon="mdi:network-outline")
             self.Datapoints.setdefault(GROUP_UNIT_STATUSES, {})[f"Zone {i} Connected Actuators List"] = ModbusSensor(icon="mdi:valve")
 
-    def onAfterRead(self):
+    async def onAfterRead(self):
         number_of_zones = self.Datapoints[GROUP_DEVICE_INFO]["Number Of Zones"].value
         for i in range(1, int(number_of_zones) + 1):
             # Format the thermostat MAC address

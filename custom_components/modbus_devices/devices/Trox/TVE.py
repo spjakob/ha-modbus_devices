@@ -63,7 +63,7 @@ class Device(ModbusDevice):
             "Active Alarms": ModbusBinarySensor(deviceClass=BinarySensorDeviceClass.PROBLEM, icon="mdi:bell")
         }
 
-    def onAfterFirstRead(self):
+    async def onAfterFirstRead(self):
         # We need to adjust scaling of flow values depending on a configuration value
         flowUnits = UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR
         match self.Datapoints[ModbusDefaultGroups.CONFIG]["201 Volume Flow Unit"].value:
@@ -77,7 +77,7 @@ class Device(ModbusDevice):
         self.Datapoints[ModbusDefaultGroups.CONFIG]["120 Q Min"].units = flowUnits
         self.Datapoints[ModbusDefaultGroups.CONFIG]["121 Q Max"].units = flowUnits
 
-    def onAfterRead(self):
+    async def onAfterRead(self):
         self.sw_version = self.Datapoints[GROUP_DEVICE_INFO]["FW"].value
 
         # Handle alarms
