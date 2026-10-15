@@ -66,12 +66,10 @@ class BaseBusManager(ABC):
     # ------------------------------------------------------------------
 
     @abstractmethod
-    async def async_start(self) -> None:
-        ...
+    async def async_start(self) -> None: ...
 
     @abstractmethod
-    async def async_stop(self) -> None:
-        ...
+    async def async_stop(self) -> None: ...
 
     @property
     def connected(self) -> bool:
@@ -80,7 +78,6 @@ class BaseBusManager(ABC):
     # ------------------------------------------------------------------
     # Reference tracking (Home Assistant config entries)
     # ------------------------------------------------------------------
-
     def attach(self, entry_id: str) -> None:
         self._users.add(entry_id)
 
@@ -96,7 +93,6 @@ class BaseBusManager(ABC):
     # ------------------------------------------------------------------
     # Serialized execution
     # ------------------------------------------------------------------
-
     async def execute(self, slave_id: int, func: Callable[..., Any], *args, **kwargs) -> Any:
         """Execute a Modbus call with locking and slave context."""
         await self.async_start()
@@ -131,12 +127,7 @@ class RTUBusManager(BaseBusManager):
         super().__init__()
 
         self.port = port
-        self._serial_cfg = {
-            "baudrate": baudrate,
-            "parity": parity,
-            "stopbits": stopbits,
-            "timeout": timeout,
-        }
+        self._serial_cfg = {"baudrate": baudrate, "parity": parity, "stopbits": stopbits, "timeout": timeout}
 
     async def async_start(self) -> None:
         if self._client is not None:
@@ -163,13 +154,7 @@ class RTUBusManager(BaseBusManager):
         self._client = None
 
     def matches_serial_config(self, *, baudrate: int, parity: str='N', stopbits: int=1, timeout: float) -> bool:
-        return self._serial_cfg == {
-            "baudrate": baudrate,
-            "parity": parity,
-            "stopbits": stopbits,
-            "timeout": timeout,
-        }
-
+        return self._serial_cfg == {"baudrate": baudrate, "parity": parity, "stopbits": stopbits, "timeout": timeout}
 
 # ============================================================================
 # TCP bus manager
@@ -212,14 +197,12 @@ class TCPBusManager(BaseBusManager):
         self._client.close()
         self._client = None
 
-
 # ============================================================================
 # Bus client (one per device)
 # ============================================================================
-
 class BusClient:
     """
-    Device-facing Modbus client proxy.
+    Device-facing Modbus client, proxy for pymodbus calls.
     Each BusClient represents exactly ONE slave/device.
     """
 

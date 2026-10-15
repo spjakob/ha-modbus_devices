@@ -9,9 +9,14 @@ from .busmanager import BusClient
 from .const import DOMAIN
 from .devices.helpers import load_device_class
 from .devices.datatypes import ModbusDefaultGroups, ModbusDatapoint
-from .devices.datatypes import EntityDataSelect, EntityDataNumber
+from .devices.datatypes import ModbusSelect, ModbusNumber
 from .devices.modbusdevice import ModbusDevice
 from .entity import ModbusBaseEntity
+
+# For translations
+from homeassistant.util.json import load_json
+from importlib import import_module
+from pathlib import Path
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,13 +52,39 @@ class ModbusCoordinator(DataUpdateCoordinator):
     async def _async_setup(self):
         # Load modbus device driver
         device_class = await load_device_class(self.device_model)
-        if device_class is not None:
-            try:
-                self._modbusDevice = device_class(self.bus)
-            except Exception as err:
-                raise ConfigEntryNotReady("Could not read data from device!") from err
-        else:
-            raise ConfigEntryError
+
+        if device_class is None:
+            raise ConfigEntryError(f"Unsupported device model: {self.device_model}")
+
+        try:
+            self._modbusDevice = device_class(self.bus)
+            await self._load_translations(device_class)
+        except Exception as err:
+            raise ConfigEntryNotReady("Could not read data from device!") from err
+
+    async def _load_translations(self, device_class):
+        # Load translations for device
+        try:
+            # Locate the device-specific translation file.
+            module = import_module(device_class.__module__)
+            device_file = Path(module.__file__)
+            translation_dir = device_file.parent / "translations"
+
+            language = self.hass.config.language.split("-")[0].split("_")[0]
+            translation_file = translation_dir / f"{language}.json"
+
+            if not translation_file.is_file():
+                _LOGGER.debug("Device %s has no translations for language '%s'; using defaults", self.name, language)
+                return
+
+            translations = await self.hass.async_add_executor_job(load_json, translation_file)
+
+            self._modbusDevice.loadTranslations(translations)
+
+        except Exception as err:
+            raise ConfigEntryNotReady(
+                "Could not initialize device or load translations!"
+            ) from err
 
     def close(self):
         """Close the underlying device safely."""
@@ -96,7 +127,12 @@ class ModbusCoordinator(DataUpdateCoordinator):
         """ Fetch data """
         try:
             async with async_timeout.timeout(20):
-                await self._modbusDevice.readData()       
+                # Read main configured data
+                await self._modbusDevice.readData()  
+
+                # Also read our config selection
+                if self.config_value_active is not None:
+                    await self._modbusDevice.readValue(ModbusDefaultGroups.CONFIG, self.config_value_active._key)
         except Exception as err:
             _LOGGER.warning("Failed to update %s: %s", self.devicename, err)
             raise UpdateFailed from err
@@ -126,9 +162,9 @@ class ModbusCoordinator(DataUpdateCoordinator):
             self.config_value_active = None
 
         # Select active entity
-        if isinstance(datapoint.entity_data, EntityDataNumber):
+        if isinstance(datapoint, ModbusNumber):
             self.config_value_active = self.config_value_number
-        elif isinstance(datapoint.entity_data, EntityDataSelect):
+        elif isinstance(datapoint, ModbusSelect):
             self.config_value_active = self.config_value_select
         else:
             _LOGGER.warning("Entity type not supported for config!")
@@ -146,7 +182,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
 
         _LOGGER.debug("Dps: %s %s", old_dp, new_dp)
 
-        if old_dp is None or type(old_dp.entity_data) != type(new_dp.entity_data):
+        if old_dp is None or type(old_dp) != type(new_dp):
             _LOGGER.debug("New type!")
             await self._swap_config_value_entity(new_dp)
         try:
@@ -178,7 +214,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
     def get_attrs(self, group, key):
         if group in self._modbusDevice.Datapoints:
             if key in self._modbusDevice.Datapoints[group]:
-                return self._modbusDevice.Datapoints[group][key].entity_data.attrs
+                return self._modbusDevice.Datapoints[group][key].attrs
         return None
 
     async def write_value(self, group, key, value):

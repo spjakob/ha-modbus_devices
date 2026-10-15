@@ -1,5 +1,6 @@
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 @dataclass
 class ModbusTrafficStats:
@@ -36,6 +37,14 @@ class ModbusTrafficStats:
         return self.rx_bytes / dt if dt > 0 else 0
     
     # Helper for diagnostics
+    def _monotonic_to_local(self, mono_ts: float) -> str | None:
+        if mono_ts == 0:
+            return None
+
+        # Convert monotonic → wall time → local timezone
+        wall_ts = time.time() - (time.monotonic() - mono_ts)
+        return datetime.fromtimestamp(wall_ts).astimezone().isoformat()
+
     def to_dict(self) -> dict:
         return {
             "tx_frames": self.tx_count,
@@ -43,7 +52,8 @@ class ModbusTrafficStats:
             "tx_bytes": self.tx_bytes,
             "rx_bytes": self.rx_bytes,
             "errors": self.errors,
-            "last_activity_monotonic": self.last_activity,
+            "start_time": self._monotonic_to_local(self.start_time),
+            "last_activity": self._monotonic_to_local(self.last_activity),
             "tx_rate_Bps": round(self.tx_rate, 1),
             "rx_rate_Bps": round(self.rx_rate, 1),
         }

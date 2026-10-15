@@ -3,7 +3,7 @@ import logging
 from ..modbusdevice import ModbusDevice
 from ..const import ModbusMode, ModbusPollMode
 from ..datatypes import ModbusDatapoint, ModbusGroup, ModbusDefaultGroups
-from ..datatypes import EntityDataSensor, EntityDataNumber, EntityDataSelect
+from ..datatypes import ModbusSensor, ModbusNumber, ModbusSelect
 
 from homeassistant.const import UnitOfTemperature
 from homeassistant.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS_MILLIWATT
@@ -39,41 +39,41 @@ class Device(ModbusDevice):
 
         # UNIT_STATUSES - Read
         self.Datapoints[GROUP_UNIT_STATUSES] = {
-            "Actuator 1": ModbusDatapoint(address=60,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 2": ModbusDatapoint(address=61,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 3": ModbusDatapoint(address=62,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 4": ModbusDatapoint(address=63,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 5": ModbusDatapoint(address=64,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 6": ModbusDatapoint(address=65,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 7": ModbusDatapoint(address=66,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 8": ModbusDatapoint(address=67,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 9": ModbusDatapoint(address=68,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 10": ModbusDatapoint(address=69,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 11": ModbusDatapoint(address=70,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
-            "Actuator 12": ModbusDatapoint(address=71,entity_data=EntityDataSensor(enum={0: "Closed", 1: "Open", 2: "Unallocated"})),
+            "Actuator 1": ModbusSensor(address=60,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 2": ModbusSensor(address=61,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 3": ModbusSensor(address=62,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 4": ModbusSensor(address=63,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 5": ModbusSensor(address=64,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 6": ModbusSensor(address=65,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 7": ModbusSensor(address=66,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 8": ModbusSensor(address=67,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 9": ModbusSensor(address=68,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 10": ModbusSensor(address=69,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 11": ModbusSensor(address=70,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
+            "Actuator 12": ModbusSensor(address=71,enum={0: "Closed", 1: "Open", 2: "Unallocated"}),
         }
 
         # ALARMS - Read-only
         self.Datapoints[GROUP_ALARMS] = {
-            "Cooling Emergency Mode": ModbusDatapoint(address=80,entity_data=EntityDataSensor(enum={0: "Normal Mode", 1: "Emergency Mode"})),
+            "Cooling Emergency Mode": ModbusSensor(address=80,enum={0: "Normal Mode", 1: "Emergency Mode"}),
         }
 
         # COMMANDS - Read/Write
         self.Datapoints[GROUP_COMMANDS] = {
-            "Operating Mode": ModbusDatapoint(address=0, entity_data=EntityDataSelect(options={0: "Undefined", 1: "Heating", 2: "Cooling"})),
-            "LED Enable": ModbusDatapoint(address=58, entity_data=EntityDataSelect(options={0: "Disable", 1: "Enable"})),
+            "Operating Mode": ModbusSelect(address=0, options={0: "Undefined", 1: "Heating", 2: "Cooling"}),
+            "LED Enable": ModbusSelect(address=58, options={0: "Disable", 1: "Enable"}),
         }
 
         # CONFIGURATION - Read/Write
         self.Datapoints[ModbusDefaultGroups.CONFIG] = {
-            "Temperature Alarm High Level": ModbusDatapoint(address=50, scaling=0.1, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
-            "Temperature Alarm Low Level": ModbusDatapoint(address=51, scaling=0.1, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
-            "Humidity Alarm High Level": ModbusDatapoint(address=52, scaling=0.1, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
-            "Humidity Alarm Low Level": ModbusDatapoint(address=53, scaling=0.1, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
-            "Battery Alarm Low Level": ModbusDatapoint(address=54, scaling=0.1, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.BATTERY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
-            "Battery Alarm Critical Level": ModbusDatapoint(address=55, scaling=0.1, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.BATTERY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
-            "Cooling Emergency Number of Zones": ModbusDatapoint(address=56, entity_data=EntityDataNumber(min_value=0, max_value=12)),
-            "Coling Mode Humidity Limit": ModbusDatapoint(address=57, scaling=0.1, entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1)),
+            "Temperature Alarm High Level": ModbusNumber(address=50, scaling=0.1, deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1),
+            "Temperature Alarm Low Level": ModbusNumber(address=51, scaling=0.1, deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1),
+            "Humidity Alarm High Level": ModbusNumber(address=52, scaling=0.1, deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1),
+            "Humidity Alarm Low Level": ModbusNumber(address=53, scaling=0.1, deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1),
+            "Battery Alarm Low Level": ModbusNumber(address=54, scaling=0.1, deviceClass=NumberDeviceClass.BATTERY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1),
+            "Battery Alarm Critical Level": ModbusNumber(address=55, scaling=0.1, deviceClass=NumberDeviceClass.BATTERY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1),
+            "Cooling Emergency Number of Zones": ModbusNumber(address=56, min_value=0, max_value=12),
+            "Coling Mode Humidity Limit": ModbusNumber(address=57, scaling=0.1, deviceClass=NumberDeviceClass.HUMIDITY, units=PERCENTAGE, min_value=0, max_value=100, step=0.1),
         }
 
     def onAfterFirstRead(self):
@@ -102,22 +102,22 @@ class Device(ModbusDevice):
 
             # Assign a dictionary of datapoints to the new dynamic group
             self.Datapoints[self.dynamic_groups[f"GROUP_SENSORS_ZONE_{i}"]] = {
-                f"Zone {i} Actual Temperature": ModbusDatapoint(
+                f"Zone {i} Actual Temperature": ModbusSensor(
                     address=base_register,
                     scaling=0.1,
-                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.TEMPERATURE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfTemperature.CELSIUS)),
-                f"Zone {i} Actual Humidity": ModbusDatapoint(
+                    deviceClass=SensorDeviceClass.TEMPERATURE, stateClass=SensorStateClass.MEASUREMENT, units=UnitOfTemperature.CELSIUS),
+                f"Zone {i} Actual Humidity": ModbusSensor(
                     address=base_register + 1,
                     type='uint',
                     scaling=0.1,
-                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.HUMIDITY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
-                f"Zone {i} Actual Battery": ModbusDatapoint(
+                    deviceClass=SensorDeviceClass.HUMIDITY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE),
+                f"Zone {i} Actual Battery": ModbusSensor(
                     address=base_register + 2,
                     type='uint',
-                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.BATTERY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE)),
-                f"Zone {i} Actual Signal Strength": ModbusDatapoint(
+                    deviceClass=SensorDeviceClass.BATTERY, stateClass=SensorStateClass.MEASUREMENT, units=PERCENTAGE),
+                f"Zone {i} Actual Signal Strength": ModbusSensor(
                     address=base_register + 3,
-                    entity_data=EntityDataSensor(deviceClass=SensorDeviceClass.SIGNAL_STRENGTH, stateClass=SensorStateClass.MEASUREMENT, units=SIGNAL_STRENGTH_DECIBELS_MILLIWATT)),
+                    deviceClass=SensorDeviceClass.SIGNAL_STRENGTH, stateClass=SensorStateClass.MEASUREMENT, units=SIGNAL_STRENGTH_DECIBELS_MILLIWATT),
                 f"Zone {i} Thermostat Address Raw": ModbusDatapoint(
                     address=base_register + 4, register_count=3, type='uint'),
                 f"Zone {i} Connected Actuators": ModbusDatapoint(
@@ -131,22 +131,22 @@ class Device(ModbusDevice):
 
             base_register = i * 100
             self.Datapoints[self.dynamic_groups[f"GROUP_SETPOINTS_ZONE_{i}"]] = {
-                f"Zone {i} Target Temperature": ModbusDatapoint(
+                f"Zone {i} Target Temperature": ModbusNumber(
                     address=base_register, 
                     scaling=0.1, 
-                    entity_data=EntityDataNumber(deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1)),
-                f"Zone {i} Override ": ModbusDatapoint(
+                    deviceClass=NumberDeviceClass.TEMPERATURE, units=UnitOfTemperature.CELSIUS, min_value=-100, max_value=100, step=0.1),
+                f"Zone {i} Override ": ModbusSelect(
                     address=base_register + 1, 
-                    entity_data=EntityDataSelect(options={0: "Inactive", 1: "Active"})),
-                f"Zone {i} Override Level": ModbusDatapoint(
+                    options={0: "Inactive", 1: "Active"}),
+                f"Zone {i} Override Level": ModbusNumber(
                     address=base_register + 2, 
-                    entity_data=EntityDataNumber(min_value=0, max_value=255))
+                    min_value=0, max_value=255)
             }
 
         # Add UI datapoints that are calculated
         for i in range(1, int(number_of_zones) + 1):
-            self.Datapoints.setdefault(GROUP_UNIT_STATUSES, {})[f"Zone {i} Thermostat Address"] = ModbusDatapoint(entity_data=EntityDataSensor(icon="mdi:network-outline"))
-            self.Datapoints.setdefault(GROUP_UNIT_STATUSES, {})[f"Zone {i} Connected Actuators List"] = ModbusDatapoint(entity_data=EntityDataSensor(icon="mdi:valve"))
+            self.Datapoints.setdefault(GROUP_UNIT_STATUSES, {})[f"Zone {i} Thermostat Address"] = ModbusSensor(icon="mdi:network-outline")
+            self.Datapoints.setdefault(GROUP_UNIT_STATUSES, {})[f"Zone {i} Connected Actuators List"] = ModbusSensor(icon="mdi:valve")
 
     def onAfterRead(self):
         number_of_zones = self.Datapoints[GROUP_DEVICE_INFO]["Number Of Zones"].value

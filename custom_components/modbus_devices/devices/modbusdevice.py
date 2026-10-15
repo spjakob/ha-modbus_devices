@@ -8,7 +8,7 @@ from pymodbus.exceptions import ModbusException
 
 from .const import ByteOrder, WordOrder, ModbusMode, ModbusPollMode
 from .datatypes import ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
-from .datatypes import EntityDataSelect, EntityDataNumber
+from .datatypes import ModbusSelect, ModbusNumber
 from .modbustraffic import ModbusTrafficStats
 from ..busmanager import BusClient
 
@@ -42,7 +42,6 @@ class ModbusDevice():
 
         self.firstRead = True
 
-
     def close(self):
         """Close the underlying client safely."""
         try:
@@ -61,18 +60,47 @@ class ModbusDevice():
         if not config_group: return  # Nothing to do if CONFIG is empty
 
         # Check if CONFIG group has any number or select datapoints
-        has_number = any(isinstance(dp.entity_data, EntityDataNumber) for dp in config_group.values())
-        has_select = any(isinstance(dp.entity_data, EntityDataSelect) for dp in config_group.values())
+        has_number = any(isinstance(dp, ModbusNumber) for dp in config_group.values())
+        has_select = any(isinstance(dp, ModbusSelect) for dp in config_group.values())
 
         if not (has_number or has_select): return   # No relevant datapoints, nothing to add
 
         # Add the selector and any required value displays
-        ui_group["Config Selection"] = ModbusDatapoint(entity_data=EntityDataSelect(category=EntityCategory.CONFIG))
-        ui_group.update({"Config Value Select": ModbusDatapoint(entity_data=EntityDataSelect(category=EntityCategory.CONFIG))} if has_select else {})
-        ui_group.update({"Config Value Number": ModbusDatapoint(entity_data=EntityDataNumber(category=EntityCategory.CONFIG))} if has_number else {})
+        ui_group["Config Selection"] = ModbusSelect(category=EntityCategory.CONFIG)
+        ui_group.update({"Config Value Select": ModbusSelect(category=EntityCategory.CONFIG)} if has_select else {})
+        ui_group.update({"Config Value Number": ModbusNumber(category=EntityCategory.CONFIG)} if has_number else {})
 
     def loadDatapoints(self):
         pass
+
+    def loadTranslations(self, translations: dict):
+        """Apply translations to select datapoint options."""
+        if not translations:
+            _LOGGER.debug("No translations provided for %s", self.model or type(self).__name__)
+            return
+
+        translated_count = 0
+
+        for group, datapoints in self.Datapoints.items():
+            for name, datapoint in datapoints.items():
+                if not isinstance(datapoint, ModbusSelect):
+                    continue
+
+                # Translations are keyed by datapoint name.
+                option_translations = translations.get(name, {})
+
+                if not isinstance(option_translations, dict) or not option_translations:
+                    continue
+
+                # Preserve option values; replace only display labels.
+                datapoint.options = {
+                    value: option_translations.get(label, label)
+                    for value, label in datapoint.options.items()
+                }
+
+                translated_count += 1
+
+        _LOGGER.debug("Applied translations to %d select datapoints for %s", translated_count, self.model or type(self).__name__)
 
     """ ******************************************************* """
     """ ************* FUNCTIONS CALLED ON EVENTS ************** """

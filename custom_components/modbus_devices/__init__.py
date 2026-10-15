@@ -26,7 +26,6 @@ from .const import (
 )
 
 from .coordinator import ModbusCoordinator
-from .devices.connection import TCPConnectionParams, RTUConnectionParams
 from .busmanager import RTUBusManager, TCPBusManager, BusClient
 
 _LOGGER = logging.getLogger(__name__)

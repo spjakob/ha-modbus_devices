@@ -86,7 +86,7 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
             data[CONF_IP] = last_entry.data[CONF_IP]
             data[CONF_PORT] = last_entry.data[CONF_PORT]
 
-        return self.async_show_form(step_id="add_tcpip", data_schema=await get_device_schema(data), errors=errors)
+        return self.async_show_form(step_id="add_tcpip", data_schema=await getDeviceSchema(data), errors=errors)
     
     async def async_step_add_rtu(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle a flow initialized by the user, adding the integration."""
@@ -108,7 +108,7 @@ class ModbusFlowHandler(ConfigFlow, domain=DOMAIN):
             data[CONF_SERIAL_PORT] = last_entry.data[CONF_SERIAL_PORT]
             data[CONF_SERIAL_BAUD] = last_entry.data[CONF_SERIAL_BAUD]
 
-        return self.async_show_form(step_id="add_rtu",data_schema=await get_device_schema(data, ports),errors=errors,)
+        return self.async_show_form(step_id="add_rtu",data_schema=await getDeviceSchema(data, ports),errors=errors,)
 
 class ModbusOptionsFlowHandler(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None):

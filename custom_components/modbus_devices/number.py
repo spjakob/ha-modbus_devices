@@ -5,31 +5,21 @@ from homeassistant.components.number import NumberEntity
 from .const import DOMAIN
 from .coordinator import ModbusCoordinator
 from .entity import ModbusBaseEntity
+from .entity_factory import create_entities
 
-from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusDatapoint, EntityDataNumber
+from .devices.datatypes import ModbusGroup, ModbusDefaultGroups, ModbusNumber
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Setup sensor from a config entry created in the integrations UI."""
-    # Find coordinator for this device
+    """Setup entities from a config entry created in the integrations UI."""
     coordinator:ModbusCoordinator = hass.data[DOMAIN][config_entry.entry_id]
-    coordinator.async_add_entities_callback = async_add_entities
-
-    # Load entities
-    ha_entities = []
-    for group, datapoints in coordinator._modbusDevice.Datapoints.items():
-        if group != ModbusDefaultGroups.CONFIG:
-            for key, datapoint in datapoints.items():
-                if isinstance(datapoint.entity_data, EntityDataNumber):
-                    ha_entities.append(ModbusNumberEntity(coordinator, group, key, datapoint))
-
-    async_add_entities(ha_entities, False)
+    async_add_entities(create_entities(coordinator, ModbusNumberEntity, ModbusNumber))
 
 class ModbusNumberEntity(ModbusBaseEntity, NumberEntity):
     """Representation of a Number."""
 
-    def __init__(self, coordinator:ModbusCoordinator, group:ModbusGroup, key:str, modbusDataPoint:ModbusDatapoint):
+    def __init__(self, coordinator:ModbusCoordinator, group:ModbusGroup, key:str, modbusDataPoint:ModbusNumber):
         """Initialize ModbusBaseEntity."""
         super().__init__(coordinator, group, key, modbusDataPoint)
 
@@ -39,12 +29,12 @@ class ModbusNumberEntity(ModbusBaseEntity, NumberEntity):
             self._attr_device_info = None       # Hide entity
 
     def _loadEntitySettings(self):
-        self._attr_device_class = self.modbusDataPoint.entity_data.deviceClass
+        self._attr_device_class = self.modbusDataPoint.deviceClass
         self._attr_mode = "box"
-        self._attr_native_min_value = self.modbusDataPoint.entity_data.min_value
-        self._attr_native_max_value = self.modbusDataPoint.entity_data.max_value
-        self._attr_native_step = self.modbusDataPoint.entity_data.step
-        self._attr_native_unit_of_measurement = self.modbusDataPoint.entity_data.units
+        self._attr_native_min_value = self.modbusDataPoint.min_value
+        self._attr_native_max_value = self.modbusDataPoint.max_value
+        self._attr_native_step = self.modbusDataPoint.step
+        self._attr_native_unit_of_measurement = self.modbusDataPoint.units
 
     @property
     def native_value(self) -> float | None:
