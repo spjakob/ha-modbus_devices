@@ -96,7 +96,7 @@ class ModbusCoordinator(DataUpdateCoordinator):
 
         """ Fetch data """
         try:
-            async with async_timeout.timeout(40):
+            async with async_timeout.timeout(60):
                 await self._modbusDevice.readData()       
         except Exception as err:
             _LOGGER.warning("Failed to update %s: %s", self.devicename, err)

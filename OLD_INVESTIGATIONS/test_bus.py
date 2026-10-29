@@ -8,11 +8,10 @@ log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
 async def test_sdm(client, unit_id):
-    print(f"\n--- Testing SDM Unit {unit_id} ---")
+    print(f"\n--- Testing Unit {unit_id} ---")
     try:
-        # Group 1 (0-88) - actually 88 registers starting at 0
-        print(f"Reading 88 input registers starting at 0 for unit {unit_id}...")
-        rr1 = await client.read_input_registers(0, count=88, device_id=unit_id)
+        print(f"Reading 24 input registers starting at 0 for unit {unit_id}...")
+        rr1 = await client.read_input_registers(0, count=24, device_id=unit_id)
         if rr1.isError():
             print(f"Error reading Group 1 on unit {unit_id}: {rr1}")
         else:
@@ -23,9 +22,8 @@ async def test_sdm(client, unit_id):
     await asyncio.sleep(0.5)
 
     try:
-        # Group 2 Energy (0x0156 / 342) - 40 registers
-        print(f"Reading 40 input registers starting at 342 for unit {unit_id}...")
-        rr2 = await client.read_input_registers(342, count=40, device_id=unit_id)
+        print(f"Reading 24 input registers starting at 342 for unit {unit_id}...")
+        rr2 = await client.read_input_registers(342, count=24, device_id=unit_id)
         if rr2.isError():
             print(f"Error reading Group 2 on unit {unit_id}: {rr2}")
         else:
@@ -40,10 +38,10 @@ async def main():
     
     print("Connected to Modbus TCP server.")
     
-    # Test SDM630 devices
-    for unit_id in [101, 102, 103]:
+    # Test SDM630 devices and a DEAD unit (30 - CASA)
+    for unit_id in [101, 30, 102, 103]:
         await test_sdm(client, unit_id)
-        await asyncio.sleep(1.0)
+        await asyncio.sleep(0.1)
         
     client.close()
 

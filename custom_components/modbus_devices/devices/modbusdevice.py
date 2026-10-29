@@ -170,11 +170,18 @@ class ModbusDevice():
                     or any(k in err_str for k in ("timeout", "timed out", "no response", "connection", "gateway"))
                 )
                 if is_timeout_or_offline:
-                    _LOGGER.warning(
-                        "Device %s %s (Slave ID %s): Communication timeout/failure reading group '%s' (%s). Aborting remaining groups for this poll.",
-                        self.manufacturer, self.model, self._slave_id, group, err
-                    )
-                    break
+                    if self.firstRead and any_success:
+                        _LOGGER.warning(
+                            "Device %s %s (Slave ID %s): Communication timeout reading group '%s' (%s). Continuing initialization with remaining groups.",
+                            self.manufacturer, self.model, self._slave_id, group, err
+                        )
+                        continue
+                    else:
+                        _LOGGER.warning(
+                            "Device %s %s (Slave ID %s): Communication timeout/failure reading group '%s' (%s). Aborting remaining groups for this poll.",
+                            self.manufacturer, self.model, self._slave_id, group, err
+                        )
+                        break
                 else:
                     _LOGGER.warning(
                         "Device %s %s (Slave ID %s): Error reading group '%s': %s. Continuing with next group.",
@@ -182,11 +189,19 @@ class ModbusDevice():
                     )
 
         if failed_groups:
-            # If nothing succeeded, or if firstRead, raise so coordinator knows update failed
-            if not any_success or self.firstRead:
+            # If nothing succeeded, raise so coordinator knows update failed
+            if not any_success:
                 first_group, first_err = failed_groups[0]
                 raise ModbusException(
-                    f"Device {self.manufacturer} {self.model} (Slave {self._slave_id}) failed reading group '{first_group}': {first_err}"
+                    f"Device {self.manufacturer} {self.model} (Slave {self._slave_id}) failed reading all groups. First error '{first_group}': {first_err}"
+                )
+            if self.firstRead:
+                _LOGGER.warning(
+                    "Device %s %s (Slave ID %s): Partial initialization — %d groups succeeded, %d failed: %s. Continuing with successfully read groups.",
+                    self.manufacturer, self.model, self._slave_id,
+                    len(self.Datapoints) - len(failed_groups),
+                    len(failed_groups),
+                    [g.name for g, _ in failed_groups]
                 )
 
         if self.firstRead:   
@@ -228,16 +243,37 @@ class ModbusDevice():
         )
 
         method = self._get_read_method(group.mode)    
-        response = await method(address=start_addr, count=n_reg, device_id=self._slave_id)
-
-        # Handle Modbus errors
-        if response.isError():
-            err_desc = decode_modbus_error(response)
-            _LOGGER.warning(
-                "Device %s %s (Slave ID %s): Failed reading group '%s' (addr %s..%s, %d registers): %s",
-                self.manufacturer, self.model, self._slave_id, group, start_addr, end_addr, n_reg, err_desc
-            )
-            raise ModbusException(f"Error reading group '{group}' (addr {start_addr}..{end_addr}, {n_reg} regs): {err_desc}")
+        
+        max_retries = 1
+        last_exc = None
+        for attempt in range(max_retries + 1):
+            try:
+                response = await method(address=start_addr, count=n_reg, device_id=self._slave_id)
+                
+                if not response.isError():
+                    break
+                    
+                err_desc = decode_modbus_error(response)
+                is_exception = False
+            except Exception as exc:
+                err_desc = str(exc)
+                is_exception = True
+                last_exc = exc
+                
+            if attempt < max_retries:
+                _LOGGER.warning(
+                    "Device %s %s (Slave ID %s): Retry %d/%d for group '%s' (addr %s..%s) due to error: %s",
+                    self.manufacturer, self.model, self._slave_id, attempt + 1, max_retries, group, start_addr, end_addr, err_desc
+                )
+                await asyncio.sleep(0.1)  # Brief pause before retry
+            else:
+                _LOGGER.warning(
+                    "Device %s %s (Slave ID %s): Failed reading group '%s' (addr %s..%s, %d registers) after %d retries: %s",
+                    self.manufacturer, self.model, self._slave_id, group, start_addr, end_addr, n_reg, max_retries, err_desc
+                )
+                if is_exception and last_exc is not None:
+                    raise last_exc
+                raise ModbusException(f"Error reading group '{group}' (addr {start_addr}..{end_addr}, {n_reg} regs): {err_desc}")
 
         data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
         _LOGGER.debug("Read data from address: %s - %s", start_addr, data)
@@ -273,16 +309,37 @@ class ModbusDevice():
         register_count = dp.register_count
 
         method = self._get_read_method(group.mode) 
-        response = await method(address=dp.address, count=register_count, device_id=self._slave_id)
-
-        # Handle Modbus errors
-        if response.isError():
-            err_desc = decode_modbus_error(response)
-            _LOGGER.warning(
-                "Device %s %s (Slave ID %s): Failed reading key '%s' in group '%s': %s",
-                self.manufacturer, self.model, self._slave_id, key, group, err_desc
-            )
-            raise ModbusException(f"Error reading value for key '{key}': {err_desc}")
+        
+        max_retries = 1
+        last_exc = None
+        for attempt in range(max_retries + 1):
+            try:
+                response = await method(address=dp.address, count=register_count, device_id=self._slave_id)
+                
+                if not response.isError():
+                    break
+                    
+                err_desc = decode_modbus_error(response)
+                is_exception = False
+            except Exception as exc:
+                err_desc = str(exc)
+                is_exception = True
+                last_exc = exc
+                
+            if attempt < max_retries:
+                _LOGGER.warning(
+                    "Device %s %s (Slave ID %s): Retry %d/%d for key '%s' in group '%s' due to error: %s",
+                    self.manufacturer, self.model, self._slave_id, attempt + 1, max_retries, key, group, err_desc
+                )
+                await asyncio.sleep(0.1)  # Brief pause before retry
+            else:
+                _LOGGER.warning(
+                    "Device %s %s (Slave ID %s): Failed reading key '%s' in group '%s' after %d retries: %s",
+                    self.manufacturer, self.model, self._slave_id, key, group, max_retries, err_desc
+                )
+                if is_exception and last_exc is not None:
+                    raise last_exc
+                raise ModbusException(f"Error reading value for key '{key}': {err_desc}")
 
         data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
         _LOGGER.debug("Read data: %s", data)

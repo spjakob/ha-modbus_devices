@@ -84,7 +84,6 @@ class BaseBusManager(ABC):
     def __init__(self, queue_timeout: float = 20.0, turnaround_delay: float = 0.02, error_recovery_delay: float = 0.4) -> None:
         self._lock = asyncio.Lock()
         self._connect_lock = asyncio.Lock()
-        self._startup_lock = asyncio.Lock()
         self._client = None
         self._users: set[str] = set()
 
@@ -156,28 +155,6 @@ class BaseBusManager(ABC):
         """Return the bus utilization percentage over the sliding 60-second window."""
         return self._utilization_tracker.utilization_percent
 
-    @property
-    def startup_lock(self) -> asyncio.Lock:
-        """Return the startup lock used to serialize initial device refreshes."""
-        return self._startup_lock
-
-    @contextlib.asynccontextmanager
-    async def startup_session(self, startup_timeout: float = 5.0, startup_retries: int = 1):
-        """Context manager to serialize startup refreshes with an extended temporary timeout and single retry."""
-        async with self._startup_lock:
-            old_timeout = getattr(self, "timeout", None)
-            old_retries = getattr(self, "retries", None)
-            if hasattr(self, "timeout"):
-                self.timeout = startup_timeout
-            if hasattr(self, "retries"):
-                self.retries = startup_retries
-            try:
-                yield
-            finally:
-                if old_timeout is not None and hasattr(self, "timeout"):
-                    self.timeout = old_timeout
-                if old_retries is not None and hasattr(self, "retries"):
-                    self.retries = old_retries
 
     # ------------------------------------------------------------------
     # Device registration
@@ -368,6 +345,17 @@ class BaseBusManager(ABC):
         finally:
             self._active_slave = None
             self._utilization_tracker.end_busy()
+
+            # Prevent pymodbus from dropping the connection due to slave timeouts.
+            # In pymodbus, TransactionManager decrements count_until_disconnect on each
+            # failed request and closes the socket/port if it falls below 0 (default: retries+3).
+            # On a multi-drop RS485 bus or Modbus TCP-to-RTU gateway, an offline slave
+            # must NEVER cause pymodbus to tear down the shared connection for all slaves.
+            if self._client is not None and hasattr(self._client, "ctx"):
+                self._client.ctx.count_until_disconnect = getattr(
+                    self._client.ctx, "max_until_disconnect", 100000
+                )
+
             try:
                 # If an error/timeout occurred, provide a longer recovery delay (0.4s)
                 # to allow the physical RS485 bus and hardware gateway UART to settle.
@@ -457,6 +445,12 @@ class RTUBusManager(BaseBusManager):
             if not client.connected:
                 client.close()
                 raise ConnectionError(f"Failed to open RTU port {self.port}")
+
+            # Disable pymodbus automatic connection/port teardown on slave timeouts.
+            # On a multi-drop RS485 bus, missing/offline slaves must never close the serial port.
+            if hasattr(client, "ctx"):
+                client.ctx.max_until_disconnect = 100000
+                client.ctx.count_until_disconnect = 100000
 
             self._client = client
 
@@ -551,6 +545,17 @@ class TCPBusManager(BaseBusManager):
                     f"Failed to connect to Modbus TCP {self.host}:{self.port}"
                 )
 
+            # Prevent pymodbus from dropping the TCP socket on slave timeouts.
+            # In a Modbus TCP-to-RTU gateway setup, individual slave timeouts (e.g. offline
+            # devices) must NOT close the shared TCP connection to the gateway.
+            # Pymodbus's TransactionManager internally decrements count_until_disconnect
+            # on every failed request and calls connection_lost() when it drops below zero
+            # (default: retries + 3 = 3 with retries=0). Setting this to a large value
+            # prevents pymodbus from ever killing the socket due to missing slaves.
+            if hasattr(client, "ctx"):
+                client.ctx.max_until_disconnect = 100000
+                client.ctx.count_until_disconnect = 100000
+
             self._client = client
             _LOGGER.debug("Created client!")
 
@@ -589,14 +594,6 @@ class BusClient:
     @property
     def connected(self) -> bool:
         return self._bus.connected
-
-    @property
-    def startup_lock(self) -> asyncio.Lock:
-        return self._bus.startup_lock
-
-    def startup_session(self, startup_timeout: float = 5.0, startup_retries: int = 1):
-        """Context manager to serialize startup refreshes with an extended temporary timeout and single retry."""
-        return self._bus.startup_session(startup_timeout=startup_timeout, startup_retries=startup_retries)
 
     def __getattr__(self, name: str):
         if name.startswith("_"):

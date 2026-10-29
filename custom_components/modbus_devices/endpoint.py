@@ -15,8 +15,8 @@ async def async_setup_endpoint(hass, entry):
 
     # Default 2.0s timeout gives RS485 devices fast recovery during regular polling
     endpoint_timeout = float(entry.data.get("timeout", entry.options.get("timeout", 2.0)))
-    # Default 20.0s queue timeout protects bus from congestion and stale request buildup
-    queue_timeout = float(entry.data.get("queue_timeout", entry.options.get("queue_timeout", 20.0)))
+    # Default 60.0s queue timeout protects bus from congestion and stale request buildup while allowing startup storm
+    queue_timeout = float(entry.data.get("queue_timeout", entry.options.get("queue_timeout", 60.0)))
 
     if device_mode == "tcpip":
         ip = entry.data.get("ip_address")
