@@ -24,9 +24,18 @@ from homeassistant.components.number import NumberDeviceClass
 _LOGGER = logging.getLogger(__name__)
 
 # Define groups
-GROUP_DEVICE_INFO = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
-GROUP_SENSORS = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
-GROUP_CONTROL = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
+# Note: Regin devices often have issues with large register blocks or gaps.
+# We split groups so each read is small and a timeout only affects one group.
+GROUP_DEVICE_INFO_SW_TYPE = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_DEVICE_INFO_FW_MAJOR = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_DEVICE_INFO_FW_MINOR = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_DEVICE_INFO_FW_BRANCH = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_DEVICE_INFO_REVISION = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ONCE)
+GROUP_SENSORS_STATUS = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_SENSORS_TEMPS = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_SENSORS_SUPPLY = ModbusGroup(ModbusMode.INPUT, ModbusPollMode.POLL_ON)
+GROUP_CONTROL_MODES = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
+GROUP_CONTROL_SETPOINT = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
 
 class Device(ModbusDevice):
     """Representation of a Regin RCF Modbus device."""
@@ -37,32 +46,40 @@ class Device(ModbusDevice):
 
     def loadDatapoints(self):
         # DEVICE_INFO - Read-only
-        self.Datapoints[GROUP_DEVICE_INFO] = {
+        self.Datapoints[GROUP_DEVICE_INFO_SW_TYPE] = {
             "Software Type": ModbusSensor(
                 address=1,
                 enum={0: "RCP", 1: "RC"},
                 category=EntityCategory.DIAGNOSTIC
             ),
+        }
+        self.Datapoints[GROUP_DEVICE_INFO_FW_MAJOR] = {
             "Major version": ModbusSensor(
                 address=2,
                 category=EntityCategory.DIAGNOSTIC
             ),
+        }
+        self.Datapoints[GROUP_DEVICE_INFO_FW_MINOR] = {
             "Minor version": ModbusSensor(
                 address=3,
                 category=EntityCategory.DIAGNOSTIC
             ),
+        }
+        self.Datapoints[GROUP_DEVICE_INFO_FW_BRANCH] = {
             "Branch version": ModbusSensor(
                 address=4,
                 category=EntityCategory.DIAGNOSTIC
             ),
+        }
+        self.Datapoints[GROUP_DEVICE_INFO_REVISION] = {
             "Revision": ModbusSensor(
                 address=5,
                 category=EntityCategory.DIAGNOSTIC
             ),
         }
 
-        # SENSORS - Read (Input Registers Function 04)
-        self.Datapoints[GROUP_SENSORS] = {
+        # SENSORS - Read (Input Registers Function 04), split into small groups
+        self.Datapoints[GROUP_SENSORS_STATUS] = {
             "Current running mode": ModbusSensor(
                 address=7,
                 enum={
@@ -90,6 +107,8 @@ class Device(ModbusDevice):
                     3: "Speed 3",
                 },
             ),
+        }
+        self.Datapoints[GROUP_SENSORS_TEMPS] = {
             "Room temperature": ModbusSensor(
                 address=11,
                 scaling=0.1,
@@ -143,6 +162,8 @@ class Device(ModbusDevice):
                 stateClass=SensorStateClass.MEASUREMENT,
                 units=PERCENTAGE
             ),
+        }
+        self.Datapoints[GROUP_SENSORS_SUPPLY] = {
             "Supply air temperature": ModbusSensor(
                 address=47,
                 scaling=0.1,
@@ -165,8 +186,8 @@ class Device(ModbusDevice):
             ),
         }
 
-        # CONTROL - Read/Write (Holding Registers Function 03)
-        self.Datapoints[GROUP_CONTROL] = {
+        # CONTROL - Read/Write (Holding Registers Function 03), split into small groups
+        self.Datapoints[GROUP_CONTROL_MODES] = {
             "Fan Mode": ModbusSelect(
                 address=5,
                 options={
@@ -186,6 +207,8 @@ class Device(ModbusDevice):
                     5: "No Remote",
                 },
             ),
+        }
+        self.Datapoints[GROUP_CONTROL_SETPOINT] = {
             "Setpoint Offset": ModbusNumber(
                 address=76,
                 scaling=0.1,
@@ -301,9 +324,9 @@ class Device(ModbusDevice):
     async def onAfterFirstRead(self):
         # Update device info
 
-        a = self.Datapoints[GROUP_DEVICE_INFO]["Software Type"].value
-        b = self.Datapoints[GROUP_DEVICE_INFO]["Major version"].value
-        c = self.Datapoints[GROUP_DEVICE_INFO]["Minor version"].value
-        d = self.Datapoints[GROUP_DEVICE_INFO]["Branch version"].value
-        e = self.Datapoints[GROUP_DEVICE_INFO]["Revision"].value
+        a = self.Datapoints[GROUP_DEVICE_INFO_SW_TYPE]["Software Type"].value
+        b = self.Datapoints[GROUP_DEVICE_INFO_FW_MAJOR]["Major version"].value
+        c = self.Datapoints[GROUP_DEVICE_INFO_FW_MINOR]["Minor version"].value
+        d = self.Datapoints[GROUP_DEVICE_INFO_FW_BRANCH]["Branch version"].value
+        e = self.Datapoints[GROUP_DEVICE_INFO_REVISION]["Revision"].value
         self.sw_version = '{}{}.{}.{}-{}'.format(a,b,c,d,e)
