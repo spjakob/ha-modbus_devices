@@ -14,6 +14,26 @@ from ..busmanager import BusClient
 
 _LOGGER = logging.getLogger(__name__)
 
+MODBUS_EXCEPTION_NAMES = {
+    0x01: "Illegal Function",
+    0x02: "Illegal Data Address",
+    0x03: "Illegal Data Value",
+    0x04: "Slave Device Failure",
+    0x05: "Acknowledge",
+    0x06: "Slave Device Busy",
+    0x08: "Memory Parity Error",
+    0x0A: "Gateway Path Unavailable",
+    0x0B: "Gateway Target Device Failed to Respond",
+}
+
+def describe_modbus_error(response) -> str:
+    """Return a readable description of a Modbus error response."""
+    code = getattr(response, "exception_code", None)
+    if code is None:
+        return str(response)
+    name = MODBUS_EXCEPTION_NAMES.get(code, "Unknown exception")
+    return f"{name} (0x{code:02X})"
+
 class ModbusDevice():
     # Default properties
     manufacturer = None
@@ -168,10 +188,18 @@ class ModbusDevice():
 
         # Handle Modbus errors
         if response.isError():
-            raise ModbusException(f"Error reading group {group}: {response}")
+            raise ModbusException(
+                f"Error reading group {group} (addr {start_addr}..{end_addr - 1}, {n_reg} regs): {describe_modbus_error(response)}"
+            )
 
         data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
         _LOGGER.debug("Read data from address: %s - %s", start_addr, data)
+
+        # A short response would silently decode into wrong values
+        if len(data) < n_reg:
+            raise ModbusException(
+                f"Short response reading group {group} (addr {start_addr}..{end_addr - 1}): got {len(data)} of {n_reg} values"
+            )
 
         # Process the registers and update data points
         for name, dp in self.Datapoints[group].items():
@@ -201,10 +229,12 @@ class ModbusDevice():
 
         # Handle Modbus errors
         if response.isError():
-            raise ModbusException(f"Error reading value for key '{key}': {response}")
+            raise ModbusException(f"Error reading value for key '{key}' (addr {dp.address}): {describe_modbus_error(response)}")
 
         data = response.bits if group.mode in (ModbusMode.COILS, ModbusMode.DISCRETE_INPUTS) else response.registers
         _LOGGER.debug("Read data: %s", data)
+        if len(data) < register_count:
+            raise ModbusException(f"Short response reading key '{key}' (addr {dp.address}): got {len(data)} of {register_count} values")
         registers = data[:register_count]
         
         try:
@@ -256,7 +286,7 @@ class ModbusDevice():
             )
 
         if response.isError():
-            raise ModbusException(f"Failed to write value for key '{key}': {response}")
+            raise ModbusException(f"Failed to write value for key '{key}' (addr {address}): {describe_modbus_error(response)}")
 
         # Update the cached value
         datapoint.value = value
