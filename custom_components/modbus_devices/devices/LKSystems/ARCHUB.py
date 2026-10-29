@@ -23,10 +23,12 @@ class Device(ModbusDevice):
     manufacturer="LKSystems"
     model="ARCHUB"
 
-     # Dict that stores dynamic groups
-    dynamic_groups: dict[str, ModbusGroup] = {}
+     # Dict that stores dynamic groups (created per instance in loadDatapoints)
+    dynamic_groups: dict[str, ModbusGroup]
 
     def loadDatapoints(self):
+        self.dynamic_groups = {}
+
         # DEVICE_INFO - Read-only
         self.Datapoints[GROUP_DEVICE_INFO] = {
             "Serial Number": ModbusDatapoint(address=0, register_count=4, type='uint'),     # 4 registers for a 64-bit value
@@ -125,7 +127,7 @@ class Device(ModbusDevice):
             }
         
         # Dynamically assign SETPOINT datapoints to a separate group for each zone
-        for i in range(1, number_of_zones + 1):
+        for i in range(1, int(number_of_zones) + 1):
             # Create a new dynamic group
             self.dynamic_groups[f"GROUP_SETPOINTS_ZONE_{i}"] = ModbusGroup(ModbusMode.HOLDING, ModbusPollMode.POLL_ON)
 
@@ -142,6 +144,14 @@ class Device(ModbusDevice):
                     address=base_register + 2, 
                     min_value=0, max_value=255)
             }
+
+        # Read the new zone groups right away, so zone values are available
+        # at startup instead of after the next scan interval
+        for group in self.dynamic_groups.values():
+            try:
+                await self.readGroup(group)
+            except Exception as err:
+                _LOGGER.warning("Initial read of zone group %s failed: %s", group, err)
 
         # Add UI datapoints that are calculated
         for i in range(1, int(number_of_zones) + 1):
