@@ -17,6 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 class BaseBusManager(ABC):
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
+        self._connect_lock = asyncio.Lock()
         self._client = None
         self._users: set[str] = set()
 
@@ -65,8 +66,17 @@ class BaseBusManager(ABC):
     # Lifecycle
     # ------------------------------------------------------------------
 
+    async def async_start(self) -> None:
+        if self._client is not None:
+            return
+
+        # Several devices start at the same time; only the first one may connect
+        async with self._connect_lock:
+            if self._client is None:
+                await self._connect()
+
     @abstractmethod
-    async def async_start(self) -> None: ...
+    async def _connect(self) -> None: ...
 
     @abstractmethod
     async def async_stop(self) -> None: ...
@@ -129,10 +139,7 @@ class RTUBusManager(BaseBusManager):
         self.port = port
         self._serial_cfg = {"baudrate": baudrate, "parity": parity, "stopbits": stopbits, "timeout": timeout}
 
-    async def async_start(self) -> None:
-        if self._client is not None:
-            return
-
+    async def _connect(self) -> None:
         _LOGGER.debug("Opening Modbus RTU bus on %s", self.port)
 
         client = AsyncModbusSerialClient(port=self.port, **self._serial_cfg, trace_packet=self._bus_packet_trace)
@@ -153,7 +160,7 @@ class RTUBusManager(BaseBusManager):
         self._client.close()
         self._client = None
 
-    def matches_serial_config(self, *, baudrate: int, parity: str='N', stopbits: int=1, timeout: float) -> bool:
+    def matches_serial_config(self, *, baudrate: int, parity: str='N', stopbits: int=1, timeout: float=3) -> bool:
         return self._serial_cfg == {"baudrate": baudrate, "parity": parity, "stopbits": stopbits, "timeout": timeout}
 
 # ============================================================================
@@ -168,12 +175,7 @@ class TCPBusManager(BaseBusManager):
         self.port = port
         self.timeout = timeout
 
-    async def async_start(self) -> None:
-        _LOGGER.debug("Starting TCP Bus Manager!")
-        if self._client is not None:
-            _LOGGER.debug("Returning!")
-            return
-
+    async def _connect(self) -> None:
         _LOGGER.debug("Opening Modbus TCP bus %s:%s", self.host, self.port)
 
         client = AsyncModbusTcpClient(host=self.host, port=self.port, timeout=self.timeout, trace_packet=self._bus_packet_trace)
