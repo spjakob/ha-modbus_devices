@@ -150,16 +150,24 @@ class ModbusButton(ModbusEntity):
 ###### DATA TYPES FOR MODBUS FUNCTIONALITY ######
 ################################################
 class ModbusGroup:
-    def __init__(self, mode: ModbusMode, poll_mode: ModbusPollMode):
+    def __init__(self, mode: ModbusMode, poll_mode: ModbusPollMode, name: str = ""):
         # Initialize mode and poll_mode
         self.mode = mode
         self.poll_mode = poll_mode
+        # Optional name, only used to make logs and error messages readable
+        self.name = name
         # Generate a unique ID automatically when the instance is created
         self._unique_id = str(uuid.uuid4())
 
     @property
     def unique_id(self):
         return self._unique_id  # Return the auto-generated unique ID
+
+    def __str__(self):
+        return self.name or f"{self.mode.name}/{self.poll_mode.name}"
+
+    def __repr__(self):
+        return f"ModbusGroup({self})"
 
     def __eq__(self, other):
         # Ensure equality is based on mode and poll_mode
