@@ -160,7 +160,7 @@ class RTUBusManager(BaseBusManager):
         self._client.close()
         self._client = None
 
-    def matches_serial_config(self, *, baudrate: int, parity: str='N', stopbits: int=1, timeout: float) -> bool:
+    def matches_serial_config(self, *, baudrate: int, parity: str='N', stopbits: int=1, timeout: float=3) -> bool:
         return self._serial_cfg == {"baudrate": baudrate, "parity": parity, "stopbits": stopbits, "timeout": timeout}
 
 # ============================================================================
