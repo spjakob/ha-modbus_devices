@@ -10,6 +10,24 @@ from .devices.modbustraffic import ModbusTrafficStats
 
 _LOGGER = logging.getLogger(__name__)
 
+# pymodbus retries a request without response this many times. The default (3)
+# keeps the shared bus locked for (retries + 1) * timeout when a device is offline.
+DEFAULT_RETRIES = 1
+
+# pymodbus closes the connection after retries + 3 requests in a row without
+# response. On a shared bus a single offline device would then drop the
+# connection for all devices, so only reconnect when the whole bus is silent.
+MAX_REQUESTS_WITHOUT_RESPONSE = 30
+
+
+def _set_disconnect_limit(client) -> None:
+    """Raise the number of unanswered requests before pymodbus disconnects."""
+    ctx = getattr(client, "ctx", None)
+    if ctx is None or not hasattr(ctx, "max_until_disconnect"):
+        _LOGGER.warning("Unknown pymodbus internals, cannot raise the auto-disconnect limit")
+        return
+    ctx.max_until_disconnect = ctx.count_until_disconnect = MAX_REQUESTS_WITHOUT_RESPONSE
+
 
 # ============================================================================
 # Base bus manager
@@ -109,8 +127,17 @@ class BaseBusManager(ABC):
 
         async with self._lock:
             self._active_slave = slave_id
+            # If the caller is cancelled (e.g. coordinator timeout) the request is
+            # still on the wire. Keep the bus locked until it is finished, otherwise
+            # the next request collides with the late response.
+            request = asyncio.ensure_future(func(*args, **kwargs))
             try:
-                return await func(*args, **kwargs)
+                return await asyncio.shield(request)
+            except asyncio.CancelledError:
+                await asyncio.wait([request])
+                if not request.cancelled():
+                    request.exception()   # Mark as retrieved, the caller is gone
+                raise
             except Exception as e:
                 # Record error at bus level
                 self.traffic.record_error()
@@ -133,16 +160,18 @@ class BaseBusManager(ABC):
 class RTUBusManager(BaseBusManager):
     """Shared Modbus RTU serial bus."""
 
-    def __init__(self, *, port: str, baudrate: int, parity: str='N', stopbits: int=1, timeout: float=3) -> None:
+    def __init__(self, *, port: str, baudrate: int, parity: str='N', stopbits: int=1, timeout: float=3, retries: int=DEFAULT_RETRIES) -> None:
         super().__init__()
 
         self.port = port
+        self.retries = retries
         self._serial_cfg = {"baudrate": baudrate, "parity": parity, "stopbits": stopbits, "timeout": timeout}
 
     async def _connect(self) -> None:
         _LOGGER.debug("Opening Modbus RTU bus on %s", self.port)
 
-        client = AsyncModbusSerialClient(port=self.port, **self._serial_cfg, trace_packet=self._bus_packet_trace)
+        client = AsyncModbusSerialClient(port=self.port, **self._serial_cfg, retries=self.retries, trace_packet=self._bus_packet_trace)
+        _set_disconnect_limit(client)
 
         await client.connect()
 
@@ -169,16 +198,18 @@ class RTUBusManager(BaseBusManager):
 class TCPBusManager(BaseBusManager):
     """Shared Modbus TCP connection."""
 
-    def __init__(self, *, host: str, port: int, timeout: float=3) -> None:
+    def __init__(self, *, host: str, port: int, timeout: float=3, retries: int=DEFAULT_RETRIES) -> None:
         super().__init__()
         self.host = host
         self.port = port
         self.timeout = timeout
+        self.retries = retries
 
     async def _connect(self) -> None:
         _LOGGER.debug("Opening Modbus TCP bus %s:%s", self.host, self.port)
 
-        client = AsyncModbusTcpClient(host=self.host, port=self.port, timeout=self.timeout, trace_packet=self._bus_packet_trace)
+        client = AsyncModbusTcpClient(host=self.host, port=self.port, timeout=self.timeout, retries=self.retries, trace_packet=self._bus_packet_trace)
+        _set_disconnect_limit(client)
 
         await client.connect()
 
