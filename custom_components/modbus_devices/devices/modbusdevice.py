@@ -4,7 +4,7 @@ from enum import Enum
 from homeassistant.helpers.entity import EntityCategory
 
 from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.exceptions import ModbusException
+from pymodbus.exceptions import ConnectionException, ModbusException, ModbusIOException
 
 from .const import ByteOrder, WordOrder, ModbusMode, ModbusPollMode
 from .datatypes import ModbusDefaultGroups, ModbusGroup, ModbusDatapoint
@@ -13,6 +13,10 @@ from .modbustraffic import ModbusTrafficStats
 from ..busmanager import BusClient
 
 _LOGGER = logging.getLogger(__name__)
+
+# Stop polling the remaining groups of a device after this many groups in a row
+# got no response, so an offline device does not keep the bus busy with timeouts
+MAX_CONSECUTIVE_NO_RESPONSE = 2
 
 class ModbusDevice():
     # Default properties
@@ -41,6 +45,7 @@ class ModbusDevice():
         _LOGGER.debug("Loaded datapoints for %s %s", self.manufacturer, self.model)
 
         self.firstRead = True
+        self._pending_once_groups = None   # POLL_ONCE groups not yet read successfully
 
     def close(self):
         """Close the underlying client safely."""
@@ -125,22 +130,71 @@ class ModbusDevice():
     """ *********** EXTERNAL CALL TO READ ALL DATA ************ """
     """ ******************************************************* """
     async def readData(self):
+        """Read all groups that are due.
+
+        A failing group does not discard the groups that were read successfully.
+        The update only fails if no group could be read at all.
+        """
         await self.onBeforeRead()
 
-        try:
-            for group, _ in self.Datapoints.items():
-                if group.poll_mode == ModbusPollMode.POLL_ON:
-                    await self.readGroup(group)
-                elif group.poll_mode == ModbusPollMode.POLL_ONCE and self.firstRead:
-                    await self.readGroup(group)
-        except Exception as err:
-            raise
+        if self._pending_once_groups is None:
+            self._pending_once_groups = {g for g in self.Datapoints if g.poll_mode == ModbusPollMode.POLL_ONCE}
 
-        if self.firstRead:   
+        succeeded = 0
+        failed = []
+        no_response_in_row = 0
+
+        for group in list(self.Datapoints):
+            if group.poll_mode == ModbusPollMode.POLL_ON:
+                pass
+            elif group.poll_mode == ModbusPollMode.POLL_ONCE and group in self._pending_once_groups:
+                pass
+            else:
+                continue
+
+            if no_response_in_row >= MAX_CONSECUTIVE_NO_RESPONSE:
+                failed.append((group, "skipped, device not responding"))
+                continue
+
+            try:
+                await self.readGroup(group)
+            except (ModbusIOException, ConnectionException, TimeoutError) as err:
+                no_response_in_row += 1
+                failed.append((group, err))
+                continue
+            except Exception as err:
+                # The device answered, e.g. with an exception response, so keep going
+                no_response_in_row = 0
+                failed.append((group, err))
+                continue
+
+            no_response_in_row = 0
+            succeeded += 1
+            self._pending_once_groups.discard(group)
+
+        if failed and not succeeded:
+            group, err = failed[0]
+            raise ModbusException(f"No group could be read, first error in group {group}: {err}")
+
+        if failed:
+            _LOGGER.warning(
+                "%s (slave %s): %d of %d groups failed, keeping the rest of this poll: %s",
+                self.model, self._slave_id, len(failed), len(failed) + succeeded,
+                "; ".join(f"{group}: {err}" for group, err in failed),
+            )
+
+        # Device info etc. comes from POLL_ONCE groups, so wait until all of them are read
+        if self.firstRead:
+            if self._pending_once_groups:
+                return
             self.firstRead = False
             await self.onAfterFirstRead()
 
-        await self.onAfterRead()
+        try:
+            await self.onAfterRead()
+        except Exception as err:
+            # Derived values may be missing when some groups failed
+            _LOGGER.warning("%s (slave %s): onAfterRead failed: %s", self.model, self._slave_id, err)
 
     """ ******************************************************* """
     """ ******************** READ GROUP *********************** """
