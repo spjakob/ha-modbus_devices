@@ -30,25 +30,51 @@ from .busmanager import RTUBusManager, TCPBusManager, BusClient
 
 _LOGGER = logging.getLogger(__name__)
 
+# TEST ONLY (not for upstream): read-only compatibility with config entries
+# created by the spjakob fork, where connection settings live in a separate
+# "endpoint" entry and device entries only reference it via endpoint_id.
+FORK_CONF_TYPE = "conf_type"
+FORK_ENDPOINT_ID = "endpoint_id"
+
+def _is_fork_endpoint(entry: ConfigEntry) -> bool:
+    return entry.data.get(FORK_CONF_TYPE) == "endpoint"
+
+def _entry_data(hass: HomeAssistant, entry: ConfigEntry) -> dict:
+    """Return the entry data, with connection settings from the fork endpoint entry if needed."""
+    data = dict(entry.data)
+    endpoint_id = data.get(FORK_ENDPOINT_ID)
+    if data.get(CONF_DEVICE_MODE) is None and endpoint_id:
+        endpoint = hass.config_entries.async_get_entry(endpoint_id)
+        if endpoint is None:
+            _LOGGER.error("%s: endpoint entry %s not found", data.get(CONF_NAME), endpoint_id)
+            return data
+        data = {**endpoint.data, **data}
+    return data
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up platform from a ConfigEntry."""
     _LOGGER.debug("Setting up configuration for Modbus Devices!")
     hass.data.setdefault(DOMAIN, {})
 
-    # Load config data
-    device_mode = entry.data.get(CONF_DEVICE_MODE)
+    # Fork endpoint entries only hold connection settings, nothing to set up
+    if _is_fork_endpoint(entry):
+        return True
+    data = _entry_data(hass, entry)
 
-    name = entry.data[CONF_NAME]
-    device_model = entry.data.get(CONF_DEVICE_MODEL, None)
-    scan_interval = entry.data[CONF_SCAN_INTERVAL]
-    scan_interval_fast = entry.data[CONF_SCAN_INTERVAL_FAST]
-    slave_id = entry.data[CONF_SLAVE_ID]
+    # Load config data
+    device_mode = data.get(CONF_DEVICE_MODE)
+
+    name = data[CONF_NAME]
+    device_model = data.get(CONF_DEVICE_MODEL, None)
+    scan_interval = data[CONF_SCAN_INTERVAL]
+    scan_interval_fast = data[CONF_SCAN_INTERVAL_FAST]
+    slave_id = data[CONF_SLAVE_ID]
 
     bus = None
 
     if device_mode == DEVICE_MODE_TCPIP:
-        ip = entry.data[CONF_IP]
-        port = entry.data[CONF_PORT]
+        ip = data[CONF_IP]
+        port = data[CONF_PORT]
 
         # ----- TCP bus setup -----
         tcp_buses = hass.data.setdefault(DOMAIN, {}).setdefault("tcp_buses", {})
@@ -61,8 +87,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         bus.attach(entry.entry_id)
     elif device_mode == DEVICE_MODE_RTU:
-        serial_port = entry.data[CONF_SERIAL_PORT]
-        baudrate = entry.data[CONF_SERIAL_BAUD]
+        serial_port = data[CONF_SERIAL_PORT]
+        baudrate = data[CONF_SERIAL_BAUD]
 
         # ----- RTU bus setup -----
         rtu_buses = hass.data.setdefault(DOMAIN, {}).setdefault("rtu_buses", {})
@@ -146,6 +172,8 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     _LOGGER.debug("Unloading Modbus Devices entry!")
+    if _is_fork_endpoint(entry):
+        return True
 
     # Unload entries
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
